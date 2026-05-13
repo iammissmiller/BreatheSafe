@@ -19,15 +19,19 @@
   <!-- NAVBAR -->
   <nav class="navbar" id="navbar">
     <span class="nav-logo">BreatheSafe</span>
-    <div class="nav-center">
-      <div class="range-btns">
-        <button class="range-btn active" data-days="7">7 Days</button>
-        <button class="range-btn" data-days="30">30 Days</button>
-        <button class="range-btn" data-days="0">All Time</button>
-      </div>
+    <div class="nav-links" style="display:flex;align-items:center;gap:20px;">
+      <a class="nav-app-link" href="dashboard.html">Dashboard</a>
+      <a class="nav-app-link" href="saferoute.html">SafeRoute</a>
+      <a class="nav-app-link" href="symptoms.html">Symptoms</a>
+      <a class="nav-app-link" href="analytics.html" style="color:var(--or);font-weight:600;">Analytics</a>
+      <a class="nav-app-link" href="helpzone.html">HelpZone</a>
     </div>
     <div class="nav-right">
-      <a class="nav-back" href="dashboard.html">← Dashboard</a>
+      <div class="range-btns">
+        <button class="range-btn active" data-days="7">7d</button>
+        <button class="range-btn" data-days="30">30d</button>
+        <button class="range-btn" data-days="0">All</button>
+      </div>
       <button class="theme-toggle" id="themeBtn">☀️</button>
       <div class="avatar" id="avatar">?</div>
     </div>
@@ -41,61 +45,75 @@
     <button class="btn-primary" onclick="location.href='symptoms.html'">Log Today's Symptoms</button>
   </div>
 
-  <!-- DASHBOARD -->
-  <main class="analytics-wrap" id="analyticsWrap">
+  <!-- MAIN -->
+  <main class="an-wrap" id="analyticsWrap">
 
-    <!-- TOP ROW -->
-    <div class="analytics-grid">
-
-      <!-- COMFORT TREND -->
-      <div class="chart-card glass" id="comfortCard">
-        <div class="chart-header">
-          <div>
-            <p class="chart-eyebrow">BREATHING COMFORT</p>
-            <h3 class="chart-title">Comfort Trend</h3>
-          </div>
-          <div class="chart-stat" id="avgComfort">—</div>
-        </div>
-        <div class="chart-body" id="comfortChart"></div>
+    <!-- STAT STRIP -->
+    <div class="an-stats" id="anStats">
+      <div class="an-stat">
+        <div class="an-stat-val" id="st-comfort">—</div>
+        <div class="an-stat-lbl">Avg Comfort</div>
       </div>
-
-      <!-- SYMPTOM FREQUENCY -->
-      <div class="chart-card glass" id="symptomCard">
-        <div class="chart-header">
-          <div>
-            <p class="chart-eyebrow">SYMPTOMS</p>
-            <h3 class="chart-title">Frequency</h3>
-          </div>
-          <div class="chart-stat" id="totalLogs">—</div>
-        </div>
-        <div class="chart-body" id="symptomChart"></div>
+      <div class="an-stat-div"></div>
+      <div class="an-stat">
+        <div class="an-stat-val" id="st-days">—</div>
+        <div class="an-stat-lbl">Days Logged</div>
       </div>
-
+      <div class="an-stat-div"></div>
+      <div class="an-stat">
+        <div class="an-stat-val" id="st-symptom">—</div>
+        <div class="an-stat-lbl">Top Symptom</div>
+      </div>
+      <div class="an-stat-div"></div>
+      <div class="an-stat">
+        <div class="an-stat-val" id="st-trigger">—</div>
+        <div class="an-stat-lbl">Top Trigger</div>
+      </div>
     </div>
 
-    <!-- BOTTOM ROW -->
-    <div class="analytics-grid">
+    <!-- CHARTS ROW -->
+    <div class="an-charts">
 
-      <!-- TRIGGER PATTERNS -->
-      <div class="chart-card glass" id="triggerCard">
-        <div class="chart-header">
+      <!-- SYMPTOM FREQUENCY -->
+      <div class="an-card" id="symptomCard">
+        <div class="an-card-header">
           <div>
-            <p class="chart-eyebrow">TRIGGERS</p>
-            <h3 class="chart-title">What Makes It Worse</h3>
+            <div class="an-eyebrow">Symptom Frequency</div>
+            <div class="an-card-title">What's showing up</div>
           </div>
+          <div class="an-card-stat" id="totalLogs">—</div>
         </div>
-        <div class="chart-body chart-body-donut" id="triggerChart"></div>
+        <div class="an-card-body" id="symptomChart"></div>
+        <div class="an-card-footer" id="symptomDetail"></div>
       </div>
 
-      <!-- SUMMARY STATS -->
-      <div class="chart-card glass" id="summaryCard">
-        <div class="chart-header">
+      <!-- STREAK TRACKER -->
+      <div class="an-card" id="streakCard">
+        <div class="an-card-header">
           <div>
-            <p class="chart-eyebrow">SUMMARY</p>
-            <h3 class="chart-title">Your Period at a Glance</h3>
+            <div class="an-eyebrow">Logging Streak</div>
+            <div class="an-card-title">Your consistency</div>
           </div>
+          <div class="an-card-stat" id="st-current-streak">—</div>
         </div>
-        <div class="summary-grid" id="summaryGrid"></div>
+        <div class="an-streak-body">
+          <div class="an-streak-stats">
+            <div class="an-streak-item">
+              <div class="an-streak-val" id="st-best-streak">—</div>
+              <div class="an-streak-lbl">Best streak</div>
+            </div>
+            <div class="an-streak-item">
+              <div class="an-streak-val" id="st-total-days">—</div>
+              <div class="an-streak-lbl">Total days</div>
+            </div>
+            <div class="an-streak-item">
+              <div class="an-streak-val" id="st-this-week">—</div>
+              <div class="an-streak-lbl">This week</div>
+            </div>
+          </div>
+          <div class="an-streak-dots" id="streakDots"></div>
+          <div class="an-streak-footer" id="streakFooter"></div>
+        </div>
       </div>
 
     </div>

@@ -1,28 +1,28 @@
 /* ═══════════════════════════════════════════
-   BREATHESAFE — analytics.js
-   Reads bs-logs, renders D3 charts.
+   BREATHESAFE — analytics.js (v2)
+   Symptom frequency bars + trigger donut.
+   Warm minimal, animated.
 ═══════════════════════════════════════════ */
 
+const COLORS = ['#C65D07','#E8820A','#FFB347','#4CAF50','#2196F3','#9C27B0'];
+
+/* ── AVATAR ── */
 const avatar = document.getElementById('avatar');
 const name   = localStorage.getItem('bs-name') || null;
-avatar.textContent = name ? name.charAt(0).toUpperCase() : '?';
+if (avatar) avatar.textContent = name ? name.charAt(0).toUpperCase() : '?';
 
-/* ── LOAD LOGS ── */
+/* ── LOGS ── */
 function getLogs() {
   try { return JSON.parse(localStorage.getItem('bs-logs')) || []; }
   catch { return []; }
 }
 
-/* ── FILTER BY DAYS ── */
 function filterLogs(logs, days) {
   if (!days) return logs;
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
   return logs.filter(l => new Date(l.date) >= cutoff);
 }
-
-/* ── COLORS ── */
-const COLORS = ['#C65D07','#FFB347','#4CAF50','#2196F3','#9C27B0','#F44336'];
 
 let currentDays = 7;
 
@@ -36,143 +36,139 @@ document.querySelectorAll('.range-btn').forEach(btn => {
   });
 });
 
-/* ── MAIN RENDER ── */
-function render() {
-  const allLogs = getLogs();
-  const logs    = filterLogs(allLogs, currentDays);
-
-  if (allLogs.length === 0) {
-    document.getElementById('emptyState').style.display  = 'flex';
-    document.getElementById('analyticsWrap').style.display = 'none';
-    return;
+/* ── COUNT UP ANIMATION ── */
+function countUp(el, target, isFloat, duration = 800) {
+  const start = performance.now();
+  const from  = 0;
+  function tick(now) {
+    const p   = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
+    const val  = from + (target - from) * ease;
+    el.textContent = isFloat ? val.toFixed(1) : Math.round(val);
+    if (p < 1) requestAnimationFrame(tick);
   }
-
-  document.getElementById('emptyState').style.display   = 'none';
-  document.getElementById('analyticsWrap').style.display = 'flex';
-
-  drawComfortTrend(logs);
-  drawSymptomFrequency(logs);
-  drawTriggerDonut(logs);
-  drawSummary(logs);
+  requestAnimationFrame(tick);
 }
 
-/* ══════════════════════════════════════════
-   COMFORT TREND — Line Chart
-══════════════════════════════════════════ */
-function drawComfortTrend(logs) {
-  const el = document.getElementById('comfortChart');
-  el.innerHTML = '';
+/* ── STAT STRIP ── */
+function drawStats(logs) {
+  const avgComfort = logs.length
+    ? logs.reduce((s, l) => s + (l.comfort || 5), 0) / logs.length
+    : 0;
 
-  if (logs.length === 0) { el.innerHTML = '<p style="color:var(--mu);font-size:13px;">No data for this period</p>'; return; }
+  const symCounts = {};
+  logs.forEach(l => (l.symptoms || []).forEach(s => {
+    const n = typeof s === 'object' ? s.name : s;
+    symCounts[n] = (symCounts[n] || 0) + 1;
+  }));
+  const topSym = Object.entries(symCounts).sort((a,b) => b[1]-a[1])[0]?.[0] || '—';
 
-  const rect   = el.getBoundingClientRect();
-  const W      = rect.width  || 400;
-  const H      = rect.height || 160;
-  const margin = { top: 10, right: 16, bottom: 28, left: 28 };
-  const iW     = W - margin.left - margin.right;
-  const iH     = H - margin.top  - margin.bottom;
+  const trigCounts = {};
+  logs.forEach(l => {
+    if (l.trigger && l.trigger !== 'Nothing specific') {
+      trigCounts[l.trigger] = (trigCounts[l.trigger] || 0) + 1;
+    }
+  });
+  const topTrig = Object.entries(trigCounts).sort((a,b) => b[1]-a[1])[0]?.[0] || '—';
 
-  const data = logs.map(l => ({ date: new Date(l.date), comfort: l.comfort || 5 }))
-                   .sort((a,b) => a.date - b.date);
+  const comfortEl = document.getElementById('st-comfort');
+  const daysEl    = document.getElementById('st-days');
+  const symEl     = document.getElementById('st-symptom');
+  const trigEl    = document.getElementById('st-trigger');
 
-  const x = d3.scaleTime().domain(d3.extent(data, d => d.date)).range([0, iW]);
-  const y = d3.scaleLinear().domain([0, 10]).range([iH, 0]);
-
-  const svg = d3.select(el).append('svg')
-    .attr('width', W).attr('height', H);
-
-  const defs = svg.append('defs');
-  const grad = defs.append('linearGradient')
-    .attr('id', 'areaGrad').attr('x1','0').attr('y1','0').attr('x2','0').attr('y2','1');
-  grad.append('stop').attr('offset','0%').attr('stop-color','#C65D07').attr('stop-opacity', 0.25);
-  grad.append('stop').attr('offset','100%').attr('stop-color','#C65D07').attr('stop-opacity', 0);
-
-  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-
-  // grid
-  g.append('g').attr('class','d3-grid')
-    .call(d3.axisLeft(y).ticks(5).tickSize(-iW).tickFormat(''));
-
-  // area
-  const area = d3.area().x(d => x(d.date)).y0(iH).y1(d => y(d.comfort)).curve(d3.curveCatmullRom);
-  g.append('path').datum(data).attr('class','d3-area').attr('d', area);
-
-  // line
-  const line = d3.line().x(d => x(d.date)).y(d => y(d.comfort)).curve(d3.curveCatmullRom);
-  g.append('path').datum(data).attr('class','d3-line').attr('d', line);
-
-  // dots
-  g.selectAll('.d3-dot').data(data).enter().append('circle')
-    .attr('class','d3-dot').attr('r', 3)
-    .attr('cx', d => x(d.date)).attr('cy', d => y(d.comfort));
-
-  // axes
-  g.append('g').attr('class','d3-axis').attr('transform',`translate(0,${iH})`)
-    .call(d3.axisBottom(x).ticks(5).tickFormat(d3.timeFormat('%b %d')));
-  g.append('g').attr('class','d3-axis').call(d3.axisLeft(y).ticks(5));
-
-  // avg
-  const avg = d3.mean(data, d => d.comfort).toFixed(1);
-  document.getElementById('avgComfort').innerHTML = `${avg}<div class="chart-stat-label">avg comfort</div>`;
+  countUp(comfortEl, avgComfort, true);
+  countUp(daysEl, logs.length, false);
+  symEl.textContent  = topSym;
+  trigEl.textContent = topTrig;
 }
 
-/* ══════════════════════════════════════════
-   SYMPTOM FREQUENCY — Bar Chart
-══════════════════════════════════════════ */
-function drawSymptomFrequency(logs) {
+/* ── SYMPTOM FREQUENCY BARS ── */
+function drawSymptomBars(logs) {
   const el = document.getElementById('symptomChart');
+  const footer = document.getElementById('symptomDetail');
+  const statEl = document.getElementById('totalLogs');
   el.innerHTML = '';
+  if (footer) footer.textContent = '';
 
-  const counts = {};
+  // Count symptoms + severity breakdown
+  const symData = {};
   logs.forEach(l => {
     (l.symptoms || []).forEach(s => {
       const name = typeof s === 'object' ? s.name : s;
-      counts[name] = (counts[name] || 0) + 1;
+      const sev  = typeof s === 'object' ? (s.severity || 'Mild') : 'Mild';
+      if (!symData[name]) symData[name] = { total: 0, mild: 0, moderate: 0, severe: 0 };
+      symData[name].total++;
+      symData[name][sev.toLowerCase()]++;
     });
   });
 
-  const data = Object.entries(counts).map(([name, count]) => ({ name, count }))
-                     .sort((a,b) => b.count - a.count);
+  const data = Object.entries(symData)
+    .map(([name, d]) => ({ name, ...d }))
+    .sort((a,b) => b.total - a.total);
 
-  if (data.length === 0) { el.innerHTML = '<p style="color:var(--mu);font-size:13px;">No symptoms logged</p>'; return; }
+  if (statEl) {
+    statEl.innerHTML = `${logs.length}<div style="font-size:10px;color:var(--mu);margin-top:2px;letter-spacing:0.1em;text-transform:uppercase;">days logged</div>`;
+  }
 
-  const rect   = el.getBoundingClientRect();
-  const W      = rect.width  || 400;
-  const H      = rect.height || 160;
-  const margin = { top: 10, right: 16, bottom: 28, left: 90 };
-  const iW     = W - margin.left - margin.right;
-  const iH     = H - margin.top  - margin.bottom;
+  if (!data.length) {
+    el.innerHTML = '<div class="an-no-data">No symptoms logged in this period</div>';
+    return;
+  }
 
-  const x = d3.scaleLinear().domain([0, d3.max(data, d => d.count)]).range([0, iW]);
-  const y = d3.scaleBand().domain(data.map(d => d.name)).range([0, iH]).padding(0.3);
+  const maxCount = Math.max(...data.map(d => d.total));
+  const wrap = document.createElement('div');
+  wrap.className = 'sym-bars';
 
-  const svg = d3.select(el).append('svg').attr('width', W).attr('height', H);
-  const g   = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+  data.forEach((d, i) => {
+    const pct = (d.total / maxCount) * 100;
 
-  g.selectAll('.d3-bar').data(data).enter().append('rect')
-    .attr('class','d3-bar')
-    .attr('x', 0).attr('y', d => y(d.name))
-    .attr('width', d => x(d.count))
-    .attr('height', y.bandwidth())
-    .attr('rx', 4).attr('fill', '#C65D07').attr('opacity', 0.8);
+    // Bar row
+    const row = document.createElement('div');
+    row.className = 'sym-bar-row';
+    row.style.animationDelay = `${i * 0.08}s`;
+    row.innerHTML = `
+      <div class="sym-bar-label">${d.name}</div>
+      <div class="sym-bar-track">
+        <div class="sym-bar-fill" data-pct="${pct}"></div>
+      </div>
+      <div class="sym-bar-count">${d.total}</div>
+    `;
+    wrap.appendChild(row);
 
-  g.selectAll('.bar-label').data(data).enter().append('text')
-    .attr('x', d => x(d.count) + 6).attr('y', d => y(d.name) + y.bandwidth() / 2 + 4)
-    .attr('fill', 'var(--sa)').attr('font-size', 11).text(d => d.count);
+    // Severity pills
+    const sevRow = document.createElement('div');
+    sevRow.className = 'sym-sev-row';
+    if (d.mild)     sevRow.innerHTML += `<span class="sym-sev-pill mild">Mild ×${d.mild}</span>`;
+    if (d.moderate) sevRow.innerHTML += `<span class="sym-sev-pill moderate">Moderate ×${d.moderate}</span>`;
+    if (d.severe)   sevRow.innerHTML += `<span class="sym-sev-pill severe">Severe ×${d.severe}</span>`;
+    wrap.appendChild(sevRow);
+  });
 
-  g.append('g').attr('class','d3-axis').attr('transform',`translate(0,${iH})`)
-    .call(d3.axisBottom(x).ticks(4).tickFormat(d => Math.round(d)));
-  g.append('g').attr('class','d3-axis').call(d3.axisLeft(y));
+  el.appendChild(wrap);
 
-  document.getElementById('totalLogs').innerHTML = `${logs.length}<div class="chart-stat-label">days logged</div>`;
+  // Animate bars after a tick
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      el.querySelectorAll('.sym-bar-fill').forEach(fill => {
+        fill.style.width = fill.dataset.pct + '%';
+      });
+    });
+  });
+
+  // Footer insight
+  if (footer && data.length) {
+    const top = data[0];
+    const sevText = top.severe > 0 ? 'including severe episodes' : top.moderate > 0 ? 'mostly moderate' : 'mostly mild';
+    footer.textContent = `${top.name} is your most frequent symptom — ${sevText}.`;
+  }
 }
 
-/* ══════════════════════════════════════════
-   TRIGGER DONUT
-══════════════════════════════════════════ */
+/* ── TRIGGER DONUT ── */
 function drawTriggerDonut(logs) {
-  const el = document.getElementById('triggerChart');
-  el.innerHTML = '';
+  const chartEl  = document.getElementById('triggerChart');
+  const legendEl = document.getElementById('triggerLegend');
+  chartEl.innerHTML  = '';
+  if (legendEl) legendEl.innerHTML = '';
 
   const counts = {};
   logs.forEach(l => {
@@ -181,83 +177,202 @@ function drawTriggerDonut(logs) {
     }
   });
 
-  const data = Object.entries(counts).map(([name, value]) => ({ name, value }));
+  const data  = Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
+  const total = data.reduce((s, d) => s + d.value, 0);
 
-  if (data.length === 0) {
-    el.innerHTML = '<p style="color:var(--mu);font-size:13px;text-align:center;">No trigger data yet</p>';
+  if (!data.length) {
+    chartEl.innerHTML = '<div class="an-no-data">No trigger data yet</div>';
     return;
   }
 
-  const size   = Math.min(el.getBoundingClientRect().height || 140, 140);
-  const radius = size / 2;
-  const inner  = radius * 0.55;
+  const size   = 160;
+  const radius = size / 2 - 4;
+  const inner  = radius * 0.58;
+  const color  = d3.scaleOrdinal().domain(data.map(d => d.name)).range(COLORS);
 
-  const pie   = d3.pie().value(d => d.value).sort(null);
-  const arc   = d3.arc().innerRadius(inner).outerRadius(radius);
-  const color = d3.scaleOrdinal().domain(data.map(d => d.name)).range(COLORS);
+  const pie    = d3.pie().value(d => d.value).sort(null).padAngle(0.03);
+  const arc    = d3.arc().innerRadius(inner).outerRadius(radius).cornerRadius(3);
+  const arcBig = d3.arc().innerRadius(inner).outerRadius(radius + 6).cornerRadius(3);
 
-  const svgWrap = document.createElement('div');
-  const svg = d3.select(svgWrap).append('svg')
+  const svg = d3.select(chartEl).append('svg')
     .attr('width', size).attr('height', size);
 
-  const g = svg.append('g').attr('transform', `translate(${radius},${radius})`);
+  const g = svg.append('g').attr('transform', `translate(${size/2},${size/2})`);
 
-  g.selectAll('path').data(pie(data)).enter().append('path')
-    .attr('d', arc).attr('fill', d => color(d.data.name))
-    .attr('stroke', 'var(--bg)').attr('stroke-width', 2);
+  const paths = g.selectAll('path')
+    .data(pie(data))
+    .enter()
+    .append('path')
+    .attr('fill', d => color(d.data.name))
+    .attr('d', arc)
+    .style('cursor', 'pointer')
+    .style('transition', 'transform 0.2s ease')
+    .on('mouseover', function(event, d) {
+      d3.select(this).attr('d', arcBig);
+    })
+    .on('mouseout', function(event, d) {
+      d3.select(this).attr('d', arc);
+    });
 
-  el.appendChild(svgWrap);
-
-  // legend
-  const legend = document.createElement('div');
-  legend.className = 'donut-legend';
-  data.forEach((d, i) => {
-    const item = document.createElement('div');
-    item.className = 'legend-item';
-    item.innerHTML = `<div class="legend-dot" style="background:${COLORS[i]}"></div>${d.name} (${d.value})`;
-    legend.appendChild(item);
+  // Animate draw in
+  paths.each(function(d) {
+    const el   = d3.select(this);
+    const end  = { startAngle: d.startAngle, endAngle: d.endAngle };
+    const start = { startAngle: d.startAngle, endAngle: d.startAngle };
+    el.attr('d', arc(start));
+    el.transition().duration(700).delay((d, i) => i * 80).ease(d3.easeCubicOut)
+      .attrTween('d', function() {
+        const interpolate = d3.interpolate(start, end);
+        return t => arc(interpolate(t));
+      });
   });
-  el.appendChild(legend);
+
+  // Center label
+  const center = document.createElement('div');
+  center.className = 'donut-center';
+  center.innerHTML = `
+    <div class="donut-center-val">${total}</div>
+    <div class="donut-center-lbl">episodes</div>
+  `;
+  chartEl.style.position = 'relative';
+  chartEl.appendChild(center);
+
+  // Legend
+  if (legendEl) {
+    data.forEach((d, i) => {
+      const item = document.createElement('div');
+      item.className = 'donut-leg-item';
+      item.style.animationDelay = `${0.3 + i * 0.08}s`;
+      const pct = Math.round((d.value / total) * 100);
+      item.innerHTML = `
+        <div class="donut-leg-dot" style="background:${COLORS[i]}"></div>
+        <div class="donut-leg-name">${d.name}</div>
+        <div class="donut-leg-pct">${pct}%</div>
+      `;
+      legendEl.appendChild(item);
+    });
+  }
 }
 
-/* ══════════════════════════════════════════
-   SUMMARY
-══════════════════════════════════════════ */
-function drawSummary(logs) {
-  const grid = document.getElementById('summaryGrid');
-  grid.innerHTML = '';
 
-  if (logs.length === 0) { grid.innerHTML = '<p style="color:var(--mu);font-size:13px;">No data</p>'; return; }
+/* ── STREAK TRACKER ── */
+function drawStreakTracker(allLogs) {
+  const dotsEl   = document.getElementById('streakDots');
+  const footerEl = document.getElementById('streakFooter');
+  if (!dotsEl) return;
+  dotsEl.innerHTML = '';
 
-  const avgComfort   = (logs.reduce((s,l) => s + (l.comfort||5), 0) / logs.length).toFixed(1);
-  const totalSymDays = logs.filter(l => l.symptoms?.length > 0).length;
-  const worstDay     = logs.reduce((a,b) => (a.comfort||5) < (b.comfort||5) ? a : b);
-  const bestDay      = logs.reduce((a,b) => (a.comfort||5) > (b.comfort||5) ? a : b);
+  // Build a set of logged dates
+  const loggedDates = new Set(allLogs.map(l => l.date));
 
-  const allSyms = {};
-  logs.forEach(l => (l.symptoms||[]).forEach(s => {
-    const n = typeof s === 'object' ? s.name : s;
-    allSyms[n] = (allSyms[n]||0) + 1;
-  }));
-  const topSym = Object.entries(allSyms).sort((a,b) => b[1]-a[1])[0]?.[0] || 'None';
+  // Calculate current streak
+  let currentStreak = 0;
+  const today = new Date();
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    if (loggedDates.has(key)) {
+      currentStreak++;
+    } else if (i > 0) {
+      break;
+    }
+  }
 
-  const items = [
-    { val: avgComfort,                    lbl: 'Avg Comfort Score' },
-    { val: `${totalSymDays}d`,            lbl: 'Days With Symptoms' },
-    { val: worstDay.date.slice(5),        lbl: 'Toughest Day' },
-    { val: topSym,                        lbl: 'Most Common Symptom' },
-  ];
+  // Calculate best streak
+  let bestStreak = 0, tempStreak = 0;
+  const sortedDates = [...loggedDates].sort();
+  for (let i = 0; i < sortedDates.length; i++) {
+    if (i === 0) {
+      tempStreak = 1;
+    } else {
+      const prev = new Date(sortedDates[i-1]);
+      const curr = new Date(sortedDates[i]);
+      const diff = (curr - prev) / (1000 * 60 * 60 * 24);
+      if (diff === 1) {
+        tempStreak++;
+      } else {
+        bestStreak = Math.max(bestStreak, tempStreak);
+        tempStreak = 1;
+      }
+    }
+    bestStreak = Math.max(bestStreak, tempStreak);
+  }
 
-  items.forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'summary-item';
-    div.innerHTML = `<span class="summary-val">${item.val}</span><span class="summary-lbl">${item.lbl}</span>`;
-    grid.appendChild(div);
-  });
+  // This week count
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - today.getDay());
+  let thisWeek = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    if (loggedDates.has(d.toISOString().split('T')[0])) thisWeek++;
+  }
+
+  // Update stat elements
+  const currentEl = document.getElementById('st-current-streak');
+  const bestEl    = document.getElementById('st-best-streak');
+  const totalEl   = document.getElementById('st-total-days');
+  const weekEl    = document.getElementById('st-this-week');
+
+  if (currentEl) currentEl.innerHTML = `${currentStreak}<div style="font-size:10px;color:var(--mu);margin-top:2px;letter-spacing:0.1em;text-transform:uppercase;">day streak</div>`;
+  if (bestEl)    bestEl.textContent    = `${bestStreak}d`;
+  if (totalEl)   totalEl.textContent   = `${allLogs.length}d`;
+  if (weekEl)    weekEl.textContent    = `${thisWeek}/7`;
+
+  // Build 30-day dot grid
+  for (let i = 29; i >= 0; i--) {
+    const d   = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    const isToday  = i === 0;
+    const isFuture = d > today;
+    const logged   = loggedDates.has(key);
+
+    const dot = document.createElement('div');
+    dot.className = 'streak-dot';
+    dot.style.animationDelay = `${(29 - i) * 0.02}s`;
+
+    if (isFuture)     dot.classList.add('future');
+    else if (isToday && logged) dot.classList.add('today');
+    else if (logged)  dot.classList.add('logged');
+    else              dot.classList.add('missed');
+
+    dot.title = `${key}${logged ? ' ✓' : ' —'}`;
+    dotsEl.appendChild(dot);
+  }
+
+  // Footer message
+  if (footerEl) {
+    if (currentStreak >= 7) {
+      footerEl.textContent = `🔥 ${currentStreak}-day streak! Keep it going.`;
+    } else if (currentStreak > 0) {
+      footerEl.textContent = `${currentStreak} day${currentStreak > 1 ? 's' : ''} in a row — best is ${bestStreak} days.`;
+    } else {
+      footerEl.textContent = `Log today to start a new streak. Your best was ${bestStreak} days.`;
+    }
+  }
+}
+
+/* ── MAIN RENDER ── */
+function render() {
+  const allLogs = getLogs();
+  const logs    = filterLogs(allLogs, currentDays);
+
+  if (allLogs.length === 0) {
+    document.getElementById('emptyState').style.display   = 'flex';
+    document.getElementById('analyticsWrap').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('emptyState').style.display   = 'none';
+  document.getElementById('analyticsWrap').style.display = 'flex';
+
+  drawStats(logs);
+  drawSymptomBars(logs);
+  drawStreakTracker(allLogs);
 }
 
 /* ── INIT ── */
 render();
-
-// re-render on resize
 window.addEventListener('resize', render);

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SafeRoute — BreatheSafe</title>
+
+  <!-- Theme first (prevents flash) -->
+  <script src="../js/theme.js"></script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="../css/variables.css" />
+  <link rel="stylesheet" href="../css/home.css" />
+  <link rel="stylesheet" href="../css/saferoute.css" />
+</head>
+<body>
+
+  <!-- Navbar injected by navbar.js -->
+  <div id="navbar-placeholder"></div>
+
+  <div class="saferoute-layout">
+
+    <!-- ── LEFT PANEL ── -->
+    <aside class="sr-panel">
+
+      <div class="sr-panel-header">
+        <h1>SafeRoute 🗺️</h1>
+        <p>Find the cleanest path between two places</p>
+      </div>
+
+      <!-- Input form -->
+      <div class="sr-form">
+        <div class="sr-input-wrap">
+          <span class="sr-input-icon origin"></span>
+          <input id="sr-origin" class="sr-input" type="text" placeholder="Current Location or area name" />
+        </div>
+        <div class="sr-input-wrap">
+          <span class="sr-input-icon dest"></span>
+          <input id="sr-dest" class="sr-input" type="text" placeholder="Destination (DMart, hospital, area...)" />
+        </div>
+        <button id="sr-go-btn" class="sr-btn">
+          <div class="sr-btn-spinner"></div>
+          <span class="sr-btn-text">Find Safe Routes</span>
+        </button>
+      </div>
+
+      <!-- Error -->
+      <div id="sr-error" class="sr-error"></div>
+
+      <!-- Route cards -->
+      <div id="sr-result" class="sr-result">
+        <div class="sr-result-label">Route Options</div>
+        <div id="sr-route-list"></div>
+      </div>
+
+      <!-- Safe zones -->
+      <div class="sr-zones">
+        <div class="sr-zones-title">Nearby Safe Zones</div>
+        <div id="sr-zone-list">
+          <div class="sr-empty">
+            <div class="sr-empty-icon">🌿</div>
+            Enter your location to discover clean air spots nearby.
+          </div>
+        </div>
+      </div>
+
+      <!-- Groq insight -->
+      <div id="sr-insight" class="sr-insight">
+        <div class="sr-insight-label">✦ AI Insight</div>
+        <div id="sr-insight-text" class="sr-insight-text"></div>
+      </div>
+
+    </aside>
+
+    <!-- ── MAP ── -->
+    <div class="sr-map-wrap">
+      <div id="saferoute-map"></div>
+
+      <!-- Legend -->
+      <div class="sr-map-legend">
+        <div class="sr-map-legend-title">AQI Level</div>
+        <div class="sr-legend-row"><span class="sr-legend-dot" style="background:#27ae60"></span> Good (0–50)</div>
+        <div class="sr-legend-row"><span class="sr-legend-dot" style="background:#f39c12"></span> Moderate (51–100)</div>
+        <div class="sr-legend-row"><span class="sr-legend-dot" style="background:#e74c3c"></span> Poor (101+)</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="../js/config.js"></script>
+  <script src="../js/navbar.js"></script>
+  <script src="../js/saferoute.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BreatheSafe — Dashboard</title>
+  <script src="../js/theme.js"></script>
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+<body>
+
+  <div class="particles">
+    <div class="particle one"></div>
+    <div class="particle two"></div>
+    <div class="particle three"></div>
+  </div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <span class="nav-logo">BreatheSafe</span>
+
+    <div class="nav-center">
+      <div class="nav-pill" id="location-name">📍 Locating...</div>
+      <div class="nav-pill" id="aqi-pill">AQI —</div>
+    </div>
+
+    <div class="nav-right">
+      <button class="theme-toggle" id="themeBtn" title="Toggle theme">☀️</button>
+      <button class="icon-btn" title="Alerts">🔔</button>
+      <div class="avatar" id="avatar">?</div>
+    </div>
+  </nav>
+
+  <!-- DASHBOARD -->
+  <main class="dashboard">
+
+    <!-- LEFT PANEL -->
+    <section class="panel panel-left glass">
+
+      <div class="panel-top">
+        <p class="eyebrow">LIVE RESPIRATORY STATUS</p>
+        <h2 class="greeting" id="greeting">Good morning</h2>
+        <h1 class="risk-status" id="risk-status">—</h1>
+        <p class="hero-desc" id="hero-description">Fetching your environmental data...</p>
+      </div>
+
+      <!-- ENV STATS -->
+      <div class="env-grid">
+        <div class="env-card">
+          <span class="env-val" id="temp-value">—</span>
+          <span class="env-lbl">Temperature</span>
+        </div>
+        <div class="env-card">
+          <span class="env-val" id="humidity-value">—</span>
+          <span class="env-lbl">Humidity</span>
+        </div>
+        <div class="env-card">
+          <span class="env-val" id="wind-value">—</span>
+          <span class="env-lbl">Wind</span>
+        </div>
+        <div class="env-card">
+          <span class="env-val" id="uv-value">—</span>
+          <span class="env-lbl">UV Index</span>
+        </div>
+      </div>
+
+      <!-- AI INSIGHT -->
+      <div class="insight-box">
+        <p class="insight-label">🤖 AI Respiratory Insight</p>
+        <p class="insight-text" id="ai-insight">Analysing your profile and environment...</p>
+      </div>
+
+      <!-- ALERTS -->
+      <div class="alerts-row">
+        <div class="alert-pill" id="alert-1">—</div>
+        <div class="alert-pill" id="alert-2">—</div>
+      </div>
+
+    </section>
+
+    <!-- RIGHT PANEL -->
+    <section class="panel panel-right">
+
+      <!-- AQI RING -->
+      <div class="aqi-ring-wrap glass">
+        <svg class="aqi-ring" viewBox="0 0 200 200">
+          <circle class="ring-bg" cx="100" cy="100" r="80" />
+          <circle class="ring-fill" id="ringFill" cx="100" cy="100" r="80"
+            stroke-dasharray="502" stroke-dashoffset="502" />
+        </svg>
+        <div class="aqi-center">
+          <span class="aqi-number" id="aqi-number">—</span>
+          <span class="aqi-label" id="aqi-label">AQI</span>
+        </div>
+      </div>
+
+      <!-- STATS -->
+      <div class="stats-col">
+        <div class="stat-card glass">
+          <span class="stat-lbl">Breathing Score</span>
+          <span class="stat-val" id="breathing-score">—</span>
+        </div>
+        <div class="stat-card glass">
+          <span class="stat-lbl">Lung Stress</span>
+          <span class="stat-val" id="lung-stress">—</span>
+        </div>
+        <div class="stat-card glass">
+          <span class="stat-lbl">Outdoor Safety</span>
+          <span class="stat-val" id="outdoor-safety">—</span>
+        </div>
+      </div>
+
+      <!-- FEATURE CARDS -->
+      <div class="features-grid">
+        <div class="feature-card glass" onclick="location.href='saferoute.html'">
+          <span class="fc-icon">🗺</span>
+          <span class="fc-name">SafeRoute</span>
+        </div>
+        <div class="feature-card glass" onclick="location.href='symptoms.html'">
+          <span class="fc-icon">🩺</span>
+          <span class="fc-name">Symptoms</span>
+        </div>
+        <div class="feature-card glass" onclick="location.href='helpzone.html'">
+          <span class="fc-icon">🤖</span>
+          <span class="fc-name">HelpZone</span>
+        </div>
+        <div class="feature-card glass" onclick="location.href='analytics.html'">
+          <span class="fc-icon">📊</span>
+          <span class="fc-name">Analytics</span>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/dashboard.js"></script>
+  <script src="../js/tour.js"></script>
+
+</body>
+</html>

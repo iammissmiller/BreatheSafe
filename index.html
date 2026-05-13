@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BreatheSafe — Respiratory Wellness & Emergency Support</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/home.css">
+</head>
+<body>
+
+<!-- ══ AMBIENT BG ══ -->
+<div class="ambient"></div>
+
+<!-- ══ NAVBAR — injected by navbar.js ══ -->
+<div id="navbar-placeholder"></div>
+
+<!-- ══════════════════════════════════
+     HERO — 100VH
+══════════════════════════════════ -->
+<section class="hero" id="hero">
+  <canvas id="heroCanvas"></canvas>
+
+  <div class="hero-content">
+
+    <h1 class="hero-title">
+      Every breath<br>
+      should feel <em>safe.</em>
+    </h1>
+
+    <p class="hero-desc">
+      BreatheSafe monitors your air, guides you through breathing distress,
+      and gives you personalized respiratory intelligence — in real time,
+      wherever you are.
+    </p>
+
+    <div class="hero-btns">
+      <a href="pages/login.html" class="btn-primary">Open the App</a>
+      <a href="#features" class="btn-secondary">See how it works</a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="hs-item">
+        <div class="hs-val">7+</div>
+        <div class="hs-lbl">Core features</div>
+      </div>
+      <div class="hs-item">
+        <div class="hs-val">Live</div>
+        <div class="hs-lbl">AQI & weather data</div>
+      </div>
+      <div class="hs-item">
+        <div class="hs-val">AI</div>
+        <div class="hs-lbl">Personalized guidance</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-hint">
+    <div class="scroll-line"></div>
+    <span>Scroll</span>
+  </div>
+</section>
+
+<!-- ══ WAVE DIVIDER ══ -->
+<div class="wave-divider">
+  <canvas id="waveCanvas"></canvas>
+</div>
+
+<!-- ══════════════════════════════════
+     FEATURES
+══════════════════════════════════ -->
+<section class="section features-section" id="features">
+  <div class="features-header">
+    <div class="section-ey">Platform Features</div>
+    <h2 class="section-title">Everything your lungs need,<br><em>in one place.</em></h2>
+    <p class="section-sub">From real-time air quality to emergency breathing guidance — BreatheSafe covers every moment of your respiratory day.</p>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="fc-icon">🆘</div>
+      <div class="fc-name">HelpZone</div>
+      <div class="fc-desc">A full-screen calming environment for panic attacks, asthma episodes, and breathing distress. Personalized exercises and guided relief — instantly.</div>
+      <span class="fc-tag">Most important</span>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">🌫️</div>
+      <div class="fc-name">Air Quality Dashboard</div>
+      <div class="fc-desc">Live AQI, PM2.5, humidity, wind, and UV — pulled from your exact location. Know what you're breathing before you step outside.</div>
+      <span class="fc-tag">Real-time API</span>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">🗺️</div>
+      <div class="fc-name">SafeRoute</div>
+      <div class="fc-desc">Compare travel routes by pollution exposure, not just distance. Find the cleanest path to your destination.</div>
+      <span class="fc-tag">Mapbox powered</span>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">🤖</div>
+      <div class="fc-name">AI Assistant</div>
+      <div class="fc-desc">A calm, supportive AI that answers your breathing questions, explains AQI levels, and gives personalized respiratory guidance.</div>
+      <span class="fc-tag">AI powered</span>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">🩺</div>
+      <div class="fc-name">Symptom Logger</div>
+      <div class="fc-desc">Log breathing difficulty, coughing, wheezing, and triggers. Track patterns over time to understand your respiratory health.</div>
+      <span class="fc-tag">Daily tracking</span>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">📊</div>
+      <div class="fc-name">Analytics</div>
+      <div class="fc-desc">Visualize your breathing comfort against AQI trends. See your most common triggers and respiratory patterns over time.</div>
+      <span class="fc-tag">Chart.js</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════
+     LIVE SNAPSHOT
+══════════════════════════════════ -->
+<section class="section snapshot-section">
+  <div class="section-ey">Live Environmental Data</div>
+  <h2 class="section-title">What the air looks like<br><em>right now.</em></h2>
+  <div class="snapshot-grid">
+    <div class="snap-card">
+      <div class="snap-label">Air Quality Index</div>
+      <div class="snap-val" id="snap-aqi">—</div>
+      <div class="snap-desc" id="snap-aqi-desc">Fetching your location…</div>
+    </div>
+    <div class="snap-card">
+      <div class="snap-label">Temperature</div>
+      <div class="snap-val" id="snap-temp">—</div>
+      <div class="snap-desc" id="snap-loc">Loading weather…</div>
+    </div>
+    <div class="snap-card">
+      <div class="snap-label">Humidity</div>
+      <div class="snap-val" id="snap-hum">—</div>
+      <div class="snap-desc">Atmospheric moisture level</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════
+     HACKATHON / EVALUATORS
+══════════════════════════════════ -->
+<section class="section hack-section" id="hackathon">
+  <div class="section-ey">GDG on Campus Hackathon</div>
+  <h2 class="section-title">Built for people who<br><em>struggle to breathe.</em></h2>
+  <div class="hack-grid">
+    <div>
+      <div class="sdg-pills">
+        <span class="sdg-pill">SDG 3 — Good Health</span>
+        <span class="sdg-pill">SDG 11 — Sustainable Cities</span>
+        <span class="sdg-pill">SDG 13 — Climate Action</span>
+      </div>
+      <p class="hack-desc">
+        Over 300 million people live with asthma. Millions more face daily respiratory
+        distress from urban pollution, anxiety, and environmental exposure — with no
+        real-time, personalized support at the moment they need it most.
+        <br><br>
+        BreatheSafe addresses this gap by combining live environmental data, AI-powered
+        guidance, and an emergency recovery experience — built to help users feel safe,
+        calm, and in control of their breathing.
+      </p>
+      <div class="stack-label">Tech Stack</div>
+      <div class="stack-grid">
+        <span class="stack-chip">HTML / CSS / JS</span>
+        <span class="stack-chip">Firebase Auth</span>
+        <span class="stack-chip">OpenWeather API</span>
+        <span class="stack-chip">Mapbox GL</span>
+        <span class="stack-chip">Chart.js</span>
+        <span class="stack-chip">LocalStorage</span>
+        <span class="stack-chip">Geolocation API</span>
+      </div>
+    </div>
+    <div class="impact-cards">
+      <div class="impact-card">
+        <div class="ic-ico">🆘</div>
+        <div class="ic-body">
+          <div class="ic-title">Emergency-first design</div>
+          <div class="ic-desc">HelpZone is built for someone mid-panic attack. No scrolling, no menus — one tap, immediate relief.</div>
+        </div>
+      </div>
+      <div class="impact-card">
+        <div class="ic-ico">🌍</div>
+        <div class="ic-body">
+          <div class="ic-title">Real environmental data</div>
+          <div class="ic-desc">Live AQI and weather from OpenWeather API, personalized to the user's exact GPS location.</div>
+        </div>
+      </div>
+      <div class="impact-card">
+        <div class="ic-ico">🧠</div>
+        <div class="ic-body">
+          <div class="ic-title">Personalized from day one</div>
+          <div class="ic-desc">An onboarding quiz builds a respiratory profile that shapes every dashboard, alert, and recommendation.</div>
+        </div>
+      </div>
+      <div class="impact-card">
+        <div class="ic-ico">💛</div>
+        <div class="ic-body">
+          <div class="ic-title">Emotional UX, not clinical UI</div>
+          <div class="ic-desc">Every screen is warm, calm, and human — not like a hospital monitor or generic dashboard.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════
+     VISION
+══════════════════════════════════ -->
+<section class="section vision-section" id="vision">
+  <div class="section-ey">Our Vision</div>
+  <h2 class="section-title">From reaction<br>to <em>prevention.</em></h2>
+  <p class="vision-body">
+    BreatheSafe exists so that no one faces a breathing crisis
+    <em>alone, uninformed, or unprepared.</em>
+    We believe respiratory safety should be as accessible as checking the weather.
+  </p>
+  <div class="vision-cta">
+    <a href="pages/login.html" class="btn-primary">Start breathing safer</a>
+  </div>
+</section>
+
+<!-- ══ FOOTER ══ -->
+<footer class="footer">
+  <div class="footer-logo">BreatheSafe</div>
+  <div class="footer-meta">Built for GDG on Campus Hackathon · 2025</div>
+  <div class="footer-links">
+    <a href="#features">Features</a>
+    <a href="#hackathon">About</a>
+    <a href="pages/login.html">Get Started</a>
+  </div>
+</footer>
+
+<!-- ══════════════════════════════════
+     SCRIPTS
+     Order matters:
+     1. navbar.js  — injects navbar HTML (creates #themeBtn)
+     2. theme.js   — attaches toggle to #themeBtn
+     3. page JS    — canvas animations, API calls
+══════════════════════════════════ -->
+<script src="js/navbar.js"></script>
+<script src="js/theme.js"></script>
+<script>
+// ══════════════════════════════════
+// HERO PARTICLE FIELD
+// Hundreds of tiny dots drifting like wind
+// Bright in both themes
+// ══════════════════════════════════
+
+document.querySelector('.scroll-hint').addEventListener('click', () => {
+document.querySelector('#features').scrollIntoView({ behavior: 'smooth' });
+});
+
+const heroEl = document.getElementById('hero');
+const hc     = document.getElementById('heroCanvas');
+const hctx   = hc.getContext('2d');
+let hW, hH, dots = [];
+
+function resizeHero() {
+  hW = hc.width  = heroEl.offsetWidth;
+  hH = hc.height = heroEl.offsetHeight;
+  initDots();
+}
+
+function initDots() {
+  dots = [];
+  const count = Math.floor((hW * hH) / 4000);
+  for (let i = 0; i < count; i++) dots.push(makeDot(false));
+}
+
+function makeDot(fromEdge) {
+  return {
+    x:       fromEdge ? -6 : Math.random() * hW,
+    y:       Math.random() * hH,
+    size:    Math.random() * 2.6 + 0.5,
+    vx:      0.16 + Math.random() * 0.28,
+    vy:     -0.03 - Math.random() * 0.07,
+    waveAmp: Math.random() * 1.0,
+    waveOff: Math.random() * Math.PI * 2,
+    waveSpd: 0.4 + Math.random() * 0.6,
+    opacity: 0.35 + Math.random() * 0.55,
+    life:    0,
+    maxLife: 180 + Math.random() * 280,
+    warm:    Math.random() > 0.72,
+  };
+}
+
+let ht = 0;
+function drawHero() {
+  hctx.clearRect(0, 0, hW, hH);
+  ht += 0.012;
+  const dark = document.body.classList.contains('dark');
+
+  dots.forEach((d, i) => {
+    d.life++;
+    d.x += d.vx;
+    d.y += d.vy + Math.sin(ht * d.waveSpd + d.waveOff) * d.waveAmp * 0.03;
+
+    const p    = d.life / d.maxLife;
+    const fade = p < 0.10 ? p / 0.10 : p > 0.82 ? 1 - (p - 0.82) / 0.18 : 1;
+    const a    = d.opacity * fade;
+
+    hctx.beginPath();
+    hctx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
+
+    // dark: bright amber + warm white
+    // light: deep orange + burnt sienna — clearly visible on white
+    hctx.fillStyle = dark
+      ? (d.warm ? `rgba(255,220,150,${a * 0.7})` : `rgba(255,155,50,${a})`)
+      : (d.warm ? `rgba(160,55,0,${a * 0.6})`   : `rgba(198,93,7,${a * 0.82})`);
+
+    hctx.fill();
+
+    if (d.x > hW + 8 || d.y < -8 || d.y > hH + 8 || d.life >= d.maxLife) {
+      dots[i] = makeDot(true);
+    }
+  });
+
+  requestAnimationFrame(drawHero);
+}
+
+window.addEventListener('resize', resizeHero);
+resizeHero();
+drawHero();
+
+// ══════════════════════════════════
+// WAVE DIVIDER
+// ══════════════════════════════════
+const wc   = document.getElementById('waveCanvas');
+const wctx = wc.getContext('2d');
+let wW, wNodes = [], wt = 0;
+
+function resizeWave() {
+  wW = wc.width = wc.parentElement.offsetWidth || window.innerWidth;
+  wc.height = 80;
+  wNodes = [];
+  for (let i = 0; i <= 90; i++) {
+    wNodes.push({ x:(i/90)*wW, baseY:40, ph:Math.random()*Math.PI*2, amp:5+Math.random()*10 });
+  }
+}
+
+function drawWave() {
+  wctx.clearRect(0, 0, wW, 80);
+  wt += 0.009;
+  const dark = document.body.classList.contains('dark');
+
+  [[.22,1.0,1.0,0],[.13,1.3,.65,1.1],[.07,.8,1.4,2.0]].forEach(([a,sc,sp,of]) => {
+    wctx.beginPath();
+    wNodes.forEach((n,i) => {
+      const y = n.baseY + Math.sin(wt*sp+n.ph+of)*n.amp*sc + Math.sin(wt*.25+i*.12)*4;
+      i===0 ? wctx.moveTo(n.x,y) : wctx.lineTo(n.x,y);
+    });
+    wctx.lineTo(wW,80); wctx.lineTo(0,80); wctx.closePath();
+    const g = wctx.createLinearGradient(0,0,wW,0);
+    if (dark) {
+      g.addColorStop(0,  `rgba(198,93,7,${a*.55})`);
+      g.addColorStop(.4, `rgba(255,155,50,${a})`);
+      g.addColorStop(.7, `rgba(255,200,90,${a*.8})`);
+      g.addColorStop(1,  `rgba(198,93,7,${a*.45})`);
+    } else {
+      g.addColorStop(0,  `rgba(160,55,0,${a*.8})`);
+      g.addColorStop(.4, `rgba(198,93,7,${a})`);
+      g.addColorStop(.7, `rgba(210,100,10,${a*.85})`);
+      g.addColorStop(1,  `rgba(140,45,0,${a*.65})`);
+    }
+    wctx.fillStyle = g; wctx.fill();
+  });
+  requestAnimationFrame(drawWave);
+}
+
+window.addEventListener('resize', resizeWave);
+resizeWave(); drawWave();
+
+// ══════════════════════════════════
+// LIVE AQI
+// ══════════════════════════════════
+const API_KEY = 'cdd2976e725237deb098721dbe53d8aa';
+
+navigator.geolocation?.getCurrentPosition(async pos => {
+  const { latitude: lat, longitude: lon } = pos.coords;
+  try {
+    const [wRes, aqRes] = await Promise.all([
+      fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`),
+      fetch(`https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}`)
+    ]);
+    const w  = await wRes.json();
+    const aq = await aqRes.json();
+    const aqi    = aq.list[0].main.aqi;
+    const labels = ['','Good','Fair','Moderate','Poor','Very Poor'];
+    const descs  = ['','Air quality is satisfactory','Acceptable air quality','Some pollutants present','Health effects possible','Health warnings in effect'];
+    document.getElementById('snap-aqi').textContent      = aqi;
+    document.getElementById('snap-aqi-desc').textContent = labels[aqi] + ' — ' + descs[aqi];
+    document.getElementById('snap-temp').textContent     = Math.round(w.main.temp) + '°C';
+    document.getElementById('snap-loc').textContent      = w.name + ', ' + w.sys.country;
+    document.getElementById('snap-hum').textContent      = w.main.humidity + '%';
+  } catch(e) {
+    document.getElementById('snap-aqi-desc').textContent = 'Enable location to see live data';
+  }
+});
+</script>
+
+</body>
+</html>

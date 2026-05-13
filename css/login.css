@@ -1,0 +1,138 @@
+/* ═══════════════════════════════════════════
+   BREATHESAFE — login.css
+═══════════════════════════════════════════ */
+
+body {
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── PARTICLES ── */
+.particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(rgba(198, 93, 7, 0.12), transparent);
+  filter: blur(70px);
+  animation: float 10s infinite ease-in-out;
+}
+
+body.dark .particle {
+  background: radial-gradient(rgba(255, 179, 71, 0.10), transparent);
+}
+
+.one   { top: 8%;    left: 8%;  }
+.two   { top: 45%;   right: 8%; animation-delay: -3s; }
+.three { bottom: 5%; left: 38%; animation-delay: -6s; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px);   }
+  50%       { transform: translateY(-28px); }
+}
+
+/* ── LAYOUT ── */
+.login-container {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+}
+
+/* ── CARD ── */
+.login-card {
+  width: 100%;
+  max-width: 520px;
+  padding: 4rem;
+  border-radius: var(--r-xl);
+  background: var(--glass-bg);
+  border: var(--glass-border);
+  text-align: center;
+  z-index: 10;
+  box-shadow: var(--orange-glow);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  animation: cardIn 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+/* ── LABEL ── */
+.login-label {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--am);
+  text-transform: uppercase;
+  margin-bottom: 1.2rem;
+  opacity: 0.85;
+}
+
+/* ── HEADING ── */
+.login-card h1 {
+  font-family: var(--font-serif);
+  font-size: 3rem;
+  font-weight: 300;
+  line-height: 1.15;
+  color: var(--wm);
+}
+
+.login-card h1 span {
+  font-style: italic;
+  color: var(--or);
+}
+
+/* ── DESCRIPTION ── */
+.login-description {
+  margin-top: 1.4rem;
+  font-size: 0.875rem;
+  font-weight: 300;
+  color: var(--sa);
+  line-height: 1.85;
+}
+
+/* ── GOOGLE BUTTON ── */
+#google-login {
+  width: 100%;
+  height: 58px;
+  margin-top: 2.4rem;
+  border-radius: var(--r-lg);
+  background: var(--bg);
+  border: 1px solid var(--bd);
+  color: var(--wm);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: var(--t);
+  box-shadow: var(--card-shadow);
+}
+
+#google-login:hover {
+  border-color: var(--or);
+  box-shadow: var(--orange-glow);
+  transform: translateY(-2px);
+}
+
+#google-login img {
+  width: 22px;
+  height: 22px;
+}

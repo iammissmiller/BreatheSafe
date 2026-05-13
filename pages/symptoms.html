@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BreatheSafe — Log Symptoms</title>
+  <script src="../js/theme.js"></script>
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/symptoms.css">
+</head>
+<body>
+
+  <div class="particles">
+    <div class="particle one"></div>
+    <div class="particle two"></div>
+    <div class="particle three"></div>
+  </div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <span class="nav-logo">BreatheSafe</span>
+    <div class="nav-right">
+      <a class="nav-back" href="dashboard.html">← Dashboard</a>
+      <button class="theme-toggle" id="themeBtn">☀️</button>
+      <div class="avatar" id="avatar">?</div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="symptoms-wrap">
+
+    <!-- ALREADY LOGGED -->
+    <div class="sym-card glass" id="alreadyLogged" style="display:none;">
+      <p class="eyebrow">ALREADY LOGGED</p>
+      <h2 class="card-title">You've checked in <em>today.</em></h2>
+      <p class="card-sub">Want to update your entry?</p>
+      <div class="already-btns">
+        <button class="btn-secondary" onclick="location.href='dashboard.html'">Back to Dashboard</button>
+        <button class="btn-primary" id="updateBtn">Update Entry</button>
+      </div>
+    </div>
+
+    <!-- LOG FORM -->
+    <div class="sym-card glass" id="logForm">
+
+      <div class="card-header">
+        <p class="eyebrow">DAILY CHECK-IN</p>
+        <h1 class="card-title">How are you <em>breathing</em> today?</h1>
+        <p class="card-sub" id="todayDate"></p>
+      </div>
+
+      <div class="form-grid">
+
+        <!-- LEFT COL -->
+        <div class="form-col">
+
+          <!-- COMFORT -->
+          <div class="field-group">
+            <label class="field-label">Overall Breathing Comfort</label>
+            <div class="slider-wrap">
+              <input class="sym-slider" id="comfortSlider" type="range" min="1" max="10" value="5">
+              <div class="slider-labels">
+                <span>Struggling</span>
+                <span>Breathing easy</span>
+              </div>
+              <div class="slider-val-wrap">
+                <span class="slider-val" id="sliderVal">5</span>
+                <span class="slider-val-lbl">/ 10</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- TIME OF DAY -->
+          <div class="field-group">
+            <label class="field-label">When did you feel it most?</label>
+            <div class="pill-row" id="timeOfDay">
+              <button class="pill-btn" data-val="Morning">Morning</button>
+              <button class="pill-btn" data-val="Afternoon">Afternoon</button>
+              <button class="pill-btn" data-val="Evening">Evening</button>
+              <button class="pill-btn" data-val="All day">All day</button>
+            </div>
+          </div>
+
+          <!-- TRIGGER -->
+          <div class="field-group">
+            <label class="field-label">What made it worse?</label>
+            <div class="pill-row" id="trigger">
+              <button class="pill-btn" data-val="Outdoor air">Outdoor air</button>
+              <button class="pill-btn" data-val="Dust">Dust</button>
+              <button class="pill-btn" data-val="Exercise">Exercise</button>
+              <button class="pill-btn" data-val="Smoke">Smoke</button>
+              <button class="pill-btn" data-val="Nothing specific">Nothing specific</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COL -->
+        <div class="form-col">
+
+          <!-- SYMPTOMS -->
+          <div class="field-group">
+            <label class="field-label">Symptoms <span class="field-optional">— select all that apply</span></label>
+            <div class="symptom-list" id="symptomList">
+
+              <div class="sym-row" data-sym="Breathlessness">
+                <button class="sym-toggle">
+                  <span class="sym-icon">😮‍💨</span>
+                  <span class="sym-name">Breathlessness</span>
+                  <span class="sym-check">+</span>
+                </button>
+                <div class="severity-row" style="display:none;">
+                  <button class="sev-btn" data-sev="Mild">Mild</button>
+                  <button class="sev-btn" data-sev="Moderate">Moderate</button>
+                  <button class="sev-btn" data-sev="Severe">Severe</button>
+                </div>
+              </div>
+
+              <div class="sym-row" data-sym="Chest Tightness">
+                <button class="sym-toggle">
+                  <span class="sym-icon">🫁</span>
+                  <span class="sym-name">Chest Tightness</span>
+                  <span class="sym-check">+</span>
+                </button>
+                <div class="severity-row" style="display:none;">
+                  <button class="sev-btn" data-sev="Mild">Mild</button>
+                  <button class="sev-btn" data-sev="Moderate">Moderate</button>
+                  <button class="sev-btn" data-sev="Severe">Severe</button>
+                </div>
+              </div>
+
+              <div class="sym-row" data-sym="Coughing">
+                <button class="sym-toggle">
+                  <span class="sym-icon">🤧</span>
+                  <span class="sym-name">Coughing</span>
+                  <span class="sym-check">+</span>
+                </button>
+                <div class="severity-row" style="display:none;">
+                  <button class="sev-btn" data-sev="Mild">Mild</button>
+                  <button class="sev-btn" data-sev="Moderate">Moderate</button>
+                  <button class="sev-btn" data-sev="Severe">Severe</button>
+                </div>
+              </div>
+
+              <div class="sym-row" data-sym="Wheezing">
+                <button class="sym-toggle">
+                  <span class="sym-icon">💨</span>
+                  <span class="sym-name">Wheezing</span>
+                  <span class="sym-check">+</span>
+                </button>
+                <div class="severity-row" style="display:none;">
+                  <button class="sev-btn" data-sev="Mild">Mild</button>
+                  <button class="sev-btn" data-sev="Moderate">Moderate</button>
+                  <button class="sev-btn" data-sev="Severe">Severe</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <button class="btn-primary" id="submitBtn">Log Today's Entry</button>
+
+    </div>
+
+  </main>
+
+  <!-- CONFIRMATION -->
+  <div class="confirm-screen" id="confirmScreen">
+    <div class="confirm-card glass">
+      <span class="confirm-icon">🌬️</span>
+      <h2 class="confirm-title">Logged, <em id="confirmName">there</em>.</h2>
+      <p class="confirm-sub">Your respiratory entry has been saved. Your dashboard has been updated.</p>
+      <div class="confirm-tags" id="confirmTags"></div>
+      <button class="btn-primary" onclick="location.href='dashboard.html'">Go to Dashboard →</button>
+    </div>
+  </div>
+
+  <script src="../js/symptoms.js"></script>
+</body>
+</html>

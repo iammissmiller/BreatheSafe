@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BreatheSafe — Analytics</title>
+  <script src="../js/theme.js"></script>
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/analytics.css">
+</head>
+<body>
+
+  <div class="particles">
+    <div class="particle one"></div>
+    <div class="particle two"></div>
+    <div class="particle three"></div>
+  </div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <span class="nav-logo">BreatheSafe</span>
+    <div class="nav-center">
+      <div class="range-btns">
+        <button class="range-btn active" data-days="7">7 Days</button>
+        <button class="range-btn" data-days="30">30 Days</button>
+        <button class="range-btn" data-days="0">All Time</button>
+      </div>
+    </div>
+    <div class="nav-right">
+      <a class="nav-back" href="dashboard.html">← Dashboard</a>
+      <button class="theme-toggle" id="themeBtn">☀️</button>
+      <div class="avatar" id="avatar">?</div>
+    </div>
+  </nav>
+
+  <!-- EMPTY STATE -->
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <span class="empty-icon">📋</span>
+    <h2 class="empty-title">No logs yet</h2>
+    <p class="empty-sub">Start logging your symptoms daily and your patterns will appear here.</p>
+    <button class="btn-primary" onclick="location.href='symptoms.html'">Log Today's Symptoms</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <main class="analytics-wrap" id="analyticsWrap">
+
+    <!-- TOP ROW -->
+    <div class="analytics-grid">
+
+      <!-- COMFORT TREND -->
+      <div class="chart-card glass" id="comfortCard">
+        <div class="chart-header">
+          <div>
+            <p class="chart-eyebrow">BREATHING COMFORT</p>
+            <h3 class="chart-title">Comfort Trend</h3>
+          </div>
+          <div class="chart-stat" id="avgComfort">—</div>
+        </div>
+        <div class="chart-body" id="comfortChart"></div>
+      </div>
+
+      <!-- SYMPTOM FREQUENCY -->
+      <div class="chart-card glass" id="symptomCard">
+        <div class="chart-header">
+          <div>
+            <p class="chart-eyebrow">SYMPTOMS</p>
+            <h3 class="chart-title">Frequency</h3>
+          </div>
+          <div class="chart-stat" id="totalLogs">—</div>
+        </div>
+        <div class="chart-body" id="symptomChart"></div>
+      </div>
+
+    </div>
+
+    <!-- BOTTOM ROW -->
+    <div class="analytics-grid">
+
+      <!-- TRIGGER PATTERNS -->
+      <div class="chart-card glass" id="triggerCard">
+        <div class="chart-header">
+          <div>
+            <p class="chart-eyebrow">TRIGGERS</p>
+            <h3 class="chart-title">What Makes It Worse</h3>
+          </div>
+        </div>
+        <div class="chart-body chart-body-donut" id="triggerChart"></div>
+      </div>
+
+      <!-- SUMMARY STATS -->
+      <div class="chart-card glass" id="summaryCard">
+        <div class="chart-header">
+          <div>
+            <p class="chart-eyebrow">SUMMARY</p>
+            <h3 class="chart-title">Your Period at a Glance</h3>
+          </div>
+        </div>
+        <div class="summary-grid" id="summaryGrid"></div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <script src="../js/analytics.js"></script>
+
+</body>
+</html>

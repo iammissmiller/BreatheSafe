@@ -1,0 +1,120 @@
+/* ═══════════════════════════════════════════
+   BREATHESAFE — SHARED DESIGN TOKENS
+   Light theme is default.
+   Dark theme applied via body.dark class.
+   Used across every page.
+═══════════════════════════════════════════ */
+
+/* ── FONTS ── */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap');
+
+:root {
+  /* ── TYPOGRAPHY ── */
+  --font-serif: 'Cormorant Garamond', serif;
+  --font-sans:  'DM Sans', sans-serif;
+
+  /* ── BRAND ── */
+  --or:  #C65D07;
+  --am:  #D4640A;
+  --go:  #E8820A;
+
+  /* ── BACKGROUNDS ── */
+  --bg:       #FFFFFF;
+  --pa:       #F8F4F0;
+  --su:       #F0EAE3;
+
+  /* ── TEXT ── */
+  --wm:  #1A1008;
+  --sa:  #5C4A38;
+  --mu:  #9C8878;
+
+  /* ── BORDERS ── */
+  --bd:  rgba(90, 60, 20, 0.10);
+  --bdh: rgba(90, 60, 20, 0.24);
+
+  /* ── GLASS ── */
+  --glass-bg:     rgba(255, 255, 255, 0.75);
+  --glass-border: 1px solid rgba(90, 60, 20, 0.10);
+
+  /* ── GLOWS ── */
+  --orange-glow: 0 0 40px rgba(198, 93, 7, 0.18);
+  --amber-glow:  0 0 50px rgba(212, 100, 10, 0.14);
+
+  /* ── NAVBAR ── */
+  --nav-bg:        rgba(255, 255, 255, 0.82);
+  --nav-bg-scroll: rgba(255, 255, 255, 0.97);
+
+  /* ── SHADOWS ── */
+  --card-shadow: 0 4px 24px rgba(90, 40, 0, 0.08);
+
+  /* ── RADIUS ── */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+
+  /* ── TRANSITION ── */
+  --t: all 0.3s ease;
+
+  /* ── AMBIENT BLOBS ── */
+  --amb-1: rgba(198, 93, 7, 0.06);
+  --amb-2: rgba(255, 179, 71, 0.04);
+
+  /* ── SECTION ALT ── */
+  --sect-alt:        #F8F4F0;
+  --sect-alt-border: rgba(90, 60, 20, 0.08);
+}
+
+/* ══════════════════════════════════════════
+   DARK THEME — applied via body.dark
+══════════════════════════════════════════ */
+body.dark {
+  --or:  #FFB347;
+  --am:  #FFB347;
+  --go:  #FFD166;
+
+  --bg:  #111010;
+  --pa:  #161514;
+  --su:  #1C1A19;
+
+  --wm:  #F5E6D3;
+  --sa:  #C2B8A3;
+  --mu:  #6B6258;
+
+  --bd:  rgba(194, 184, 163, 0.09);
+  --bdh: rgba(194, 184, 163, 0.24);
+
+  --glass-bg:     rgba(255, 255, 255, 0.04);
+  --glass-border: 1px solid rgba(194, 184, 163, 0.09);
+
+  --orange-glow: 0 0 40px rgba(198, 93, 7, 0.30);
+  --amber-glow:  0 0 50px rgba(255, 179, 71, 0.20);
+
+  --nav-bg:        rgba(17, 16, 16, 0.72);
+  --nav-bg-scroll: rgba(17, 16, 16, 0.97);
+
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.40);
+
+  --amb-1: rgba(198, 93, 7, 0.10);
+  --amb-2: rgba(255, 179, 71, 0.06);
+
+  --sect-alt:        #161514;
+  --sect-alt-border: rgba(194, 184, 163, 0.08);
+}
+
+/* ══════════════════════════════════════════
+   GLOBAL RESETS — applied on every page
+══════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--wm);
+  overflow-x: hidden;
+  transition: background 0.4s ease, color 0.4s ease;
+}
+
+a { text-decoration: none; color: inherit; }
+button { border: none; outline: none; cursor: pointer; font-family: var(--font-sans); }

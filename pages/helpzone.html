@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HelpZone — BreatheSafe</title>
+  <script src="../js/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/variables.css" />
+  <link rel="stylesheet" href="../css/home.css" />
+  <link rel="stylesheet" href="../css/helpzone.css" />
+</head>
+<body>
+
+  <div id="navbar-placeholder"></div>
+
+  <div class="hz-layout">
+
+    <!-- ── LEFT: Trigger selection ── -->
+    <aside class="hz-left">
+
+      <div class="hz-header">
+        <h1>HelpZone 🫁</h1>
+        <p>Select what's happening — get a real action plan</p>
+        <div class="hz-profile">
+          <span class="hz-profile-dot"></span>
+          <span id="hz-profile-text">Loading profile…</span>
+        </div>
+      </div>
+
+      <!-- STEP 0: Select triggers -->
+      <div class="hz-step active" id="hz-s0">
+        <div class="hz-section-label">What's happening? (pick all that apply)</div>
+
+        <div class="hz-triggers">
+          <div class="hz-trigger" data-t="asthma">
+            <div class="hz-trigger-ico">🫁</div>
+            <div class="hz-trigger-info">
+              <div class="hz-trigger-name">Asthma episode</div>
+              <div class="hz-trigger-desc">Wheezing, tight chest, hard to inhale</div>
+            </div>
+            <div class="hz-trigger-check">✓</div>
+          </div>
+          <div class="hz-trigger" data-t="panic">
+            <div class="hz-trigger-ico">💨</div>
+            <div class="hz-trigger-info">
+              <div class="hz-trigger-name">Breathing attack</div>
+              <div class="hz-trigger-desc">Can't catch breath, gasping</div>
+            </div>
+            <div class="hz-trigger-check">✓</div>
+          </div>
+          <div class="hz-trigger" data-t="pollution">
+            <div class="hz-trigger-ico">🌫️</div>
+            <div class="hz-trigger-info">
+              <div class="hz-trigger-name">Dust / smoke exposure</div>
+              <div class="hz-trigger-desc">Environmental irritation, coughing</div>
+            </div>
+            <div class="hz-trigger-check">✓</div>
+          </div>
+          <div class="hz-trigger" data-t="dizzy">
+            <div class="hz-trigger-ico">😵</div>
+            <div class="hz-trigger-info">
+              <div class="hz-trigger-name">Dizziness / hyperventilation</div>
+              <div class="hz-trigger-desc">Lightheaded, breathing too fast</div>
+            </div>
+            <div class="hz-trigger-check">✓</div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div class="hz-section-label">Anything to add? (optional)</div>
+          <textarea class="hz-textarea" id="hz-note" rows="2"
+            placeholder="e.g. started after going outside, took inhaler already…"></textarea>
+        </div>
+
+        <button class="hz-btn" id="hz-go-btn" disabled>
+          <div class="hz-btn-spinner"></div>
+          <span class="hz-btn-label">Build my action plan →</span>
+        </button>
+      </div>
+
+      <!-- STEP 1: Loading -->
+      <div class="hz-step" id="hz-s1">
+        <div class="hz-section-label">Building your plan…</div>
+        <div class="hz-loading-list">
+          <div class="hz-loading-row" id="hz-a0"><div class="hz-loading-dot"></div>Reading your triggers</div>
+          <div class="hz-loading-row" id="hz-a1"><div class="hz-loading-dot"></div>Checking your health profile</div>
+          <div class="hz-loading-row" id="hz-a2"><div class="hz-loading-dot"></div>Generating step-by-step actions</div>
+          <div class="hz-loading-row" id="hz-a3"><div class="hz-loading-dot"></div>Ordering by priority</div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Summary (shown after done) -->
+      <div class="hz-step" id="hz-s2">
+        <div class="hz-section-label">Episode complete</div>
+        <p style="font-size:0.82rem;color:var(--muted,#888);line-height:1.6">
+          You made it through. Take a moment to rest before logging this episode in Symptoms.
+        </p>
+        <button class="hz-reset-btn" id="hz-reset-btn">← Start again</button>
+      </div>
+
+    </aside>
+
+    <!-- ── RIGHT: Guided protocol ── -->
+    <div class="hz-right">
+
+      <!-- Idle -->
+      <div class="hz-idle" id="hz-idle">
+        <div class="hz-idle-icon">🩺</div>
+        <div class="hz-idle-title">Your action plan<br>will appear here</div>
+        <div class="hz-idle-sub">Select what's happening on the left and tap "Build my action plan"</div>
+      </div>
+
+      <!-- Protocol -->
+      <div class="hz-protocol" id="hz-protocol">
+
+        <div class="hz-proto-header">
+          <div class="hz-proto-eyebrow" id="hz-proto-eyebrow">Action Plan</div>
+          <div class="hz-proto-title" id="hz-proto-title">—</div>
+          <div class="hz-proto-intro" id="hz-proto-intro">—</div>
+        </div>
+
+        <div class="hz-progress-bar">
+          <div class="hz-progress-fill" id="hz-progress-fill" style="width:0%"></div>
+        </div>
+
+        <div class="hz-steps-list" id="hz-steps-list"></div>
+
+        <div class="hz-proto-footer">
+          <button class="hz-skip-btn" id="hz-skip-btn">Skip</button>
+          <button class="hz-next-btn" id="hz-next-btn">Start →</button>
+        </div>
+
+      </div>
+
+      <!-- Done -->
+      <div class="hz-done" id="hz-done">
+        <div class="hz-done-icon">✅</div>
+        <div class="hz-done-title">Well done.</div>
+        <div class="hz-done-sub" id="hz-done-msg">You completed all steps. Rest for a moment and monitor how you feel.</div>
+        <button class="hz-done-btn" id="hz-done-btn">Start over</button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/navbar.js"></script>
+  <script src="../js/helpzone.js"></script>
+
+</body>
+</html>

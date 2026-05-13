@@ -336,3 +336,30 @@
   .hero-stats    { flex-wrap: wrap; gap: 20px; }
   .snapshot-grid { grid-template-columns: 1fr 1fr; }
 }
+/* ── APP NAVBAR LINKS ── */
+.nav-app-link {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--sa);
+  letter-spacing: 0.02em;
+  transition: color 0.3s;
+  padding: 4px 0;
+  position: relative;
+}
+
+.nav-app-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; left: 0;
+  width: 0; height: 1.5px;
+  background: var(--or);
+  transition: width 0.25s ease;
+}
+
+.nav-app-link:hover { color: var(--or); }
+.nav-app-link:hover::after { width: 100%; }
+
+@media (max-width: 900px) {
+  .nav-app-link { display: none; }
+  .nav-app-link[data-page="dashboard.html"] { display: block; }
+}

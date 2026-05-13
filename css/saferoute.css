@@ -4,7 +4,7 @@
 
 .saferoute-layout {
   display: flex;
-  height: calc(100vh - 60px); /* subtract navbar height */
+  height: calc(100vh - 58px);
   overflow: hidden;
   background: var(--bg);
 }
@@ -484,3 +484,31 @@ body.dark .sr-suggestion-item:hover { background: #222; }
   color: var(--muted, #999);
   margin-top: 1px;
 }
+/* ── NAVBAR ── */
+.navbar {
+  position: relative; z-index: 10;
+  height: 58px; padding: 0 32px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--nav-bg); border-bottom: 1px solid var(--bd);
+  flex-shrink: 0; transition: background 0.35s ease;
+}
+.nav-logo {
+  font-family: var(--font-serif);
+  font-size: 20px; font-weight: 500;
+  color: var(--or); letter-spacing: 0.04em;
+}
+.nav-app-link {
+  font-size: 13px; font-weight: 400;
+  color: var(--sa); letter-spacing: 0.02em;
+  transition: color 0.3s; text-decoration: none;
+}
+.nav-app-link:hover { color: var(--or); }
+.nav-right { display: flex; align-items: center; gap: 12px; }
+.theme-toggle {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--su); border: 1px solid var(--bd);
+  color: var(--sa); font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.3s;
+}
+.theme-toggle:hover { border-color: var(--or); color: var(--or); }

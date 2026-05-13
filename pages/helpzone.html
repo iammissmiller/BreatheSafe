@@ -9,12 +9,24 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../css/variables.css" />
-  <link rel="stylesheet" href="../css/home.css" />
   <link rel="stylesheet" href="../css/helpzone.css" />
 </head>
 <body>
 
-  <div id="navbar-placeholder"></div>
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <span class="nav-logo">BreatheSafe</span>
+    <div class="nav-links" style="display:flex;align-items:center;gap:20px;">
+      <a class="nav-app-link" href="dashboard.html">Dashboard</a>
+      <a class="nav-app-link" href="saferoute.html">SafeRoute</a>
+      <a class="nav-app-link" href="symptoms.html">Symptoms</a>
+      <a class="nav-app-link" href="analytics.html">Analytics</a>
+      <a class="nav-app-link" href="helpzone.html">HelpZone</a>
+    </div>
+    <div class="nav-right">
+      <button class="theme-toggle" id="themeBtn">☀️</button>
+    </div>
+  </nav>
 
   <div class="hz-layout">
 
@@ -148,7 +160,6 @@
   </div>
 
   <script src="../js/config.js"></script>
-  <script src="../js/navbar.js"></script>
   <script src="../js/helpzone.js"></script>
 
 </body>

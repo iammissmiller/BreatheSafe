@@ -12,10 +12,16 @@
 
   /* ── APPLY SAVED THEME ON LOAD (before paint) ── */
   const saved = localStorage.getItem('bs-theme');
-  if (saved === 'dark') {
-    document.body.classList.add('dark');
+  function applyTheme() {
+    if (saved === 'dark' && document.body) {
+      document.body.classList.add('dark');
+    }
   }
-  // light is default — no class needed
+  if (document.body) {
+    applyTheme();
+  } else {
+    document.addEventListener('DOMContentLoaded', applyTheme);
+  }
 
   /* ── UPDATE TOGGLE BUTTON ICON ── */
   function syncIcon() {
@@ -51,6 +57,7 @@
       localStorage.setItem('bs-theme', isDark ? 'dark' : 'light');
       syncIcon();
       updateNavBg();
+      document.dispatchEvent(new CustomEvent('bs-theme-change', { detail: { dark: isDark } }));
     });
   }
 

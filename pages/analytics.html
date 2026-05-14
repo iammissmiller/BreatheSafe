@@ -69,21 +69,27 @@
         <div class="an-stat-val" id="st-trigger">—</div>
         <div class="an-stat-lbl">Top Trigger</div>
       </div>
+      <div class="an-stat-div"></div>
+      <div class="an-stat">
+        <div class="an-stat-val" id="st-episodes">—</div>
+        <div class="an-stat-lbl">Episodes</div>
+      </div>
     </div>
 
     <!-- CHARTS ROW -->
     <div class="an-charts">
 
-      <!-- SYMPTOM FREQUENCY -->
+      <!-- SYMPTOM PROGRESSION -->
       <div class="an-card" id="symptomCard">
         <div class="an-card-header">
           <div>
-            <div class="an-eyebrow">Symptom Frequency</div>
-            <div class="an-card-title">What's showing up</div>
+            <div class="an-eyebrow">Breathing Comfort</div>
+            <div class="an-card-title">How you've been feeling</div>
           </div>
           <div class="an-card-stat" id="totalLogs">—</div>
         </div>
         <div class="an-card-body" id="symptomChart"></div>
+        <div class="an-prog-legend" id="progLegend"></div>
         <div class="an-card-footer" id="symptomDetail"></div>
       </div>
 
@@ -94,7 +100,7 @@
             <div class="an-eyebrow">Logging Streak</div>
             <div class="an-card-title">Your consistency</div>
           </div>
-          <div class="an-card-stat" id="st-current-streak">—</div>
+          <div class="an-streak-current" id="st-current-streak">—</div>
         </div>
         <div class="an-streak-body">
           <div class="an-streak-stats">
@@ -111,7 +117,7 @@
               <div class="an-streak-lbl">This week</div>
             </div>
           </div>
-          <div class="an-streak-dots" id="streakDots"></div>
+          <div id="streakDots" style="display:flex;flex-direction:column;gap:4px;flex:1;min-height:0;width:100%;"></div>
           <div class="an-streak-footer" id="streakFooter"></div>
         </div>
       </div>

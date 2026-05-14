@@ -306,6 +306,9 @@ Rules:
     document.getElementById('hz-done-msg').textContent =
       `You completed all ${protocol.steps.length} steps for ${triggers}. Rest for a moment and consider logging this in Symptoms.`;
 
+    // Save episode to localStorage
+    saveEpisode([...selectedTriggers], protocol.steps.length);
+
     // Hide protocol, show done
     document.getElementById('hz-protocol').classList.remove('active');
     document.getElementById('hz-protocol').style.display = 'none';
@@ -313,6 +316,20 @@ Rules:
     document.getElementById('hz-done').classList.add('active');
 
     showLeftStep('hz-s2');
+  }
+
+  function saveEpisode(triggers, stepsCompleted) {
+    try {
+      const today    = new Date().toISOString().split('T')[0];
+      const episodes = JSON.parse(localStorage.getItem('bs-episodes') || '[]');
+      episodes.push({
+        date:           today,
+        time:           new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        triggers,
+        stepsCompleted,
+      });
+      localStorage.setItem('bs-episodes', JSON.stringify(episodes));
+    } catch (e) {}
   }
 
   // ── GO BUTTON ────────────────────────────────────────────

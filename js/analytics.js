@@ -1,10 +1,54 @@
 /* ═══════════════════════════════════════════
-   BREATHESAFE — analytics.js (v2)
-   Symptom frequency bars + trigger donut.
-   Warm minimal, animated.
+   BREATHESAFE — analytics.js (v3)
+   Symptom progression + calendar streak tracker
 ═══════════════════════════════════════════ */
 
-const COLORS = ['#C65D07','#E8820A','#FFB347','#4CAF50','#2196F3','#9C27B0'];
+const SYM_COLORS = {
+  'Breathlessness':  '#C65D07',
+  'Chest Tightness': '#E8820A',
+  'Coughing':        '#FFB347',
+  'Wheezing':        '#2196F3',
+};
+const SEV_MAP   = { 'Mild': 1, 'Moderate': 2, 'Severe': 3 };
+const SEV_LABEL = { 1: 'Mild', 2: 'Moderate', 3: 'Severe' };
+
+/* ── TOOLTIP ── */
+const tooltip = document.createElement('div');
+tooltip.className = 'an-tooltip';
+document.body.appendChild(tooltip);
+
+function showTooltip(e, date, comfort, symptoms) {
+  const symText = symptoms && symptoms.length
+    ? symptoms.map(s => typeof s === 'object' ? `${s.name} (${s.severity})` : s).join(', ')
+    : 'No symptoms';
+
+  tooltip.innerHTML = `
+    <div class="an-tooltip-date">${date}</div>
+    <div class="an-tooltip-comfort">${comfort}<span style="font-size:11px;color:var(--mu)">/10</span></div>
+    <div class="an-tooltip-syms">${symText}</div>
+  `;
+  tooltip.classList.add('visible');
+  moveTooltip(e);
+}
+
+function moveTooltip(e) {
+  const x = e.clientX + 14;
+  const y = e.clientY - 10;
+  const tw = 200;
+  const th = 80;
+  tooltip.style.left = (x + tw > window.innerWidth ? e.clientX - tw - 14 : x) + 'px';
+  tooltip.style.top  = (y + th > window.innerHeight ? e.clientY - th - 10 : y) + 'px';
+}
+
+function hideTooltip() {
+  tooltip.classList.remove('visible');
+}
+
+document.addEventListener('mousemove', e => {
+  if (tooltip.classList.contains('visible')) moveTooltip(e);
+});
+
+
 
 /* ── AVATAR ── */
 const avatar = document.getElementById('avatar');
@@ -14,6 +58,11 @@ if (avatar) avatar.textContent = name ? name.charAt(0).toUpperCase() : '?';
 /* ── LOGS ── */
 function getLogs() {
   try { return JSON.parse(localStorage.getItem('bs-logs')) || []; }
+  catch { return []; }
+}
+
+function getEpisodes() {
+  try { return JSON.parse(localStorage.getItem('bs-episodes') || '[]'); }
   catch { return []; }
 }
 
@@ -36,14 +85,14 @@ document.querySelectorAll('.range-btn').forEach(btn => {
   });
 });
 
-/* ── COUNT UP ANIMATION ── */
+/* ── COUNT UP ── */
 function countUp(el, target, isFloat, duration = 800) {
+  if (!el) return;
   const start = performance.now();
-  const from  = 0;
   function tick(now) {
-    const p   = Math.min((now - start) / duration, 1);
+    const p    = Math.min((now - start) / duration, 1);
     const ease = 1 - Math.pow(1 - p, 3);
-    const val  = from + (target - from) * ease;
+    const val  = target * ease;
     el.textContent = isFloat ? val.toFixed(1) : Math.round(val);
     if (p < 1) requestAnimationFrame(tick);
   }
@@ -53,8 +102,7 @@ function countUp(el, target, isFloat, duration = 800) {
 /* ── STAT STRIP ── */
 function drawStats(logs) {
   const avgComfort = logs.length
-    ? logs.reduce((s, l) => s + (l.comfort || 5), 0) / logs.length
-    : 0;
+    ? logs.reduce((s, l) => s + (l.comfort || 5), 0) / logs.length : 0;
 
   const symCounts = {};
   logs.forEach(l => (l.symptoms || []).forEach(s => {
@@ -65,241 +113,221 @@ function drawStats(logs) {
 
   const trigCounts = {};
   logs.forEach(l => {
-    if (l.trigger && l.trigger !== 'Nothing specific') {
+    if (l.trigger && l.trigger !== 'Nothing specific')
       trigCounts[l.trigger] = (trigCounts[l.trigger] || 0) + 1;
-    }
   });
   const topTrig = Object.entries(trigCounts).sort((a,b) => b[1]-a[1])[0]?.[0] || '—';
 
-  const comfortEl = document.getElementById('st-comfort');
-  const daysEl    = document.getElementById('st-days');
-  const symEl     = document.getElementById('st-symptom');
-  const trigEl    = document.getElementById('st-trigger');
+  countUp(document.getElementById('st-comfort'), avgComfort, true);
+  countUp(document.getElementById('st-days'), logs.length, false);
+  const symEl  = document.getElementById('st-symptom');
+  const trigEl = document.getElementById('st-trigger');
+  if (symEl)  symEl.textContent  = topSym;
+  if (trigEl) trigEl.textContent = topTrig;
 
-  countUp(comfortEl, avgComfort, true);
-  countUp(daysEl, logs.length, false);
-  symEl.textContent  = topSym;
-  trigEl.textContent = topTrig;
+  // Episode count
+  const episodes = filterLogs(getEpisodes(), currentDays);
+  const epEl = document.getElementById('st-episodes');
+  if (epEl) {
+    if (episodes.length === 0) epEl.textContent = '0';
+    else countUp(epEl, episodes.length, false);
+  }
 }
 
-/* ── SYMPTOM FREQUENCY BARS ── */
-function drawSymptomBars(logs) {
-  const el = document.getElementById('symptomChart');
-  const footer = document.getElementById('symptomDetail');
-  const statEl = document.getElementById('totalLogs');
+/* ── COMFORT TREND ── */
+function drawSymptomProgression(logs) {
+  const el       = document.getElementById('symptomChart');
+  const legendEl = document.getElementById('progLegend');
+  const footerEl = document.getElementById('symptomDetail');
+  const statEl   = document.getElementById('totalLogs');
+
   el.innerHTML = '';
-  if (footer) footer.textContent = '';
-
-  // Count symptoms + severity breakdown
-  const symData = {};
-  logs.forEach(l => {
-    (l.symptoms || []).forEach(s => {
-      const name = typeof s === 'object' ? s.name : s;
-      const sev  = typeof s === 'object' ? (s.severity || 'Mild') : 'Mild';
-      if (!symData[name]) symData[name] = { total: 0, mild: 0, moderate: 0, severe: 0 };
-      symData[name].total++;
-      symData[name][sev.toLowerCase()]++;
-    });
-  });
-
-  const data = Object.entries(symData)
-    .map(([name, d]) => ({ name, ...d }))
-    .sort((a,b) => b.total - a.total);
+  if (legendEl) legendEl.innerHTML = '';
+  if (footerEl) footerEl.textContent = '';
 
   if (statEl) {
     statEl.innerHTML = `${logs.length}<div style="font-size:10px;color:var(--mu);margin-top:2px;letter-spacing:0.1em;text-transform:uppercase;">days logged</div>`;
   }
 
-  if (!data.length) {
-    el.innerHTML = '<div class="an-no-data">No symptoms logged in this period</div>';
+  if (!logs.length) {
+    el.innerHTML = '<div class="an-no-data">No data for this period</div>';
     return;
   }
 
-  const maxCount = Math.max(...data.map(d => d.total));
-  const wrap = document.createElement('div');
-  wrap.className = 'sym-bars';
+  const sorted = [...logs].sort((a,b) => new Date(a.date) - new Date(b.date));
+  const data   = sorted.map(l => ({ date: new Date(l.date), value: l.comfort || 5 }));
 
-  data.forEach((d, i) => {
-    const pct = (d.total / maxCount) * 100;
+  const rect = el.getBoundingClientRect();
+  const W    = Math.max(rect.width  || 460, 200);
+  const H    = Math.max(rect.height || 180, 120);
+  const margin = { top: 16, right: 16, bottom: 28, left: 36 };
+  const iW   = W - margin.left - margin.right;
+  const iH   = H - margin.top  - margin.bottom;
 
-    // Bar row
-    const row = document.createElement('div');
-    row.className = 'sym-bar-row';
-    row.style.animationDelay = `${i * 0.08}s`;
-    row.innerHTML = `
-      <div class="sym-bar-label">${d.name}</div>
-      <div class="sym-bar-track">
-        <div class="sym-bar-fill" data-pct="${pct}"></div>
-      </div>
-      <div class="sym-bar-count">${d.total}</div>
-    `;
-    wrap.appendChild(row);
+  const x = d3.scaleTime().domain(d3.extent(data, d => d.date)).range([0, iW]);
+  const y = d3.scaleLinear().domain([0, 10]).range([iH, 0]);
 
-    // Severity pills
-    const sevRow = document.createElement('div');
-    sevRow.className = 'sym-sev-row';
-    if (d.mild)     sevRow.innerHTML += `<span class="sym-sev-pill mild">Mild ×${d.mild}</span>`;
-    if (d.moderate) sevRow.innerHTML += `<span class="sym-sev-pill moderate">Moderate ×${d.moderate}</span>`;
-    if (d.severe)   sevRow.innerHTML += `<span class="sym-sev-pill severe">Severe ×${d.severe}</span>`;
-    wrap.appendChild(sevRow);
+  const svg = d3.select(el).append('svg').attr('width', W).attr('height', H);
+
+  const defs = svg.append('defs');
+  const grad = defs.append('linearGradient').attr('id','comfortGrad').attr('x1','0').attr('y1','0').attr('x2','0').attr('y2','1');
+  grad.append('stop').attr('offset','0%').attr('stop-color','#C65D07').attr('stop-opacity', 0.18);
+  grad.append('stop').attr('offset','100%').attr('stop-color','#C65D07').attr('stop-opacity', 0);
+
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  // Grid
+  g.append('g').attr('class','d3-grid')
+    .call(d3.axisLeft(y).ticks(5).tickSize(-iW).tickFormat(''));
+
+  // Reference lines
+  [5, 7].forEach((val, i) => {
+    g.append('line')
+      .attr('x1', 0).attr('x2', iW)
+      .attr('y1', y(val)).attr('y2', y(val))
+      .attr('stroke', i === 0 ? 'rgba(198,93,7,0.15)' : 'rgba(39,174,96,0.2)')
+      .attr('stroke-width', 1)
+      .attr('stroke-dasharray', '4,4');
+
+    g.append('text')
+      .attr('x', iW + 4)
+      .attr('y', y(val) + 4)
+      .attr('font-size', 9)
+      .attr('fill', i === 0 ? 'rgba(198,93,7,0.5)' : 'rgba(39,174,96,0.6)')
+      .attr('font-family', 'var(--font-sans)')
+      .text(i === 0 ? 'mid' : 'good');
   });
 
-  el.appendChild(wrap);
+  // Area fill
+  const area = d3.area().x(d => x(d.date)).y0(iH).y1(d => y(d.value)).curve(d3.curveCatmullRom);
+  g.append('path').datum(data).attr('fill','url(#comfortGrad)').attr('d', area);
 
-  // Animate bars after a tick
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      el.querySelectorAll('.sym-bar-fill').forEach(fill => {
-        fill.style.width = fill.dataset.pct + '%';
-      });
-    });
-  });
+  // Line
+  const line = d3.line().x(d => x(d.date)).y(d => y(d.value)).curve(d3.curveCatmullRom);
+  const path = g.append('path')
+    .datum(data)
+    .attr('fill', 'none')
+    .attr('stroke', '#C65D07')
+    .attr('stroke-width', 2.5)
+    .attr('stroke-linecap', 'round')
+    .attr('d', line);
 
-  // Footer insight
-  if (footer && data.length) {
-    const top = data[0];
-    const sevText = top.severe > 0 ? 'including severe episodes' : top.moderate > 0 ? 'mostly moderate' : 'mostly mild';
-    footer.textContent = `${top.name} is your most frequent symptom — ${sevText}.`;
-  }
-}
+  // Animate line draw
+  const totalLength = path.node().getTotalLength();
+  path
+    .attr('stroke-dasharray', totalLength)
+    .attr('stroke-dashoffset', totalLength)
+    .transition().duration(1000).ease(d3.easeCubicOut)
+    .attr('stroke-dashoffset', 0);
 
-/* ── TRIGGER DONUT ── */
-function drawTriggerDonut(logs) {
-  const chartEl  = document.getElementById('triggerChart');
-  const legendEl = document.getElementById('triggerLegend');
-  chartEl.innerHTML  = '';
-  if (legendEl) legendEl.innerHTML = '';
-
-  const counts = {};
-  logs.forEach(l => {
-    if (l.trigger && l.trigger !== 'Nothing specific') {
-      counts[l.trigger] = (counts[l.trigger] || 0) + 1;
-    }
-  });
-
-  const data  = Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
-  const total = data.reduce((s, d) => s + d.value, 0);
-
-  if (!data.length) {
-    chartEl.innerHTML = '<div class="an-no-data">No trigger data yet</div>';
-    return;
-  }
-
-  const size   = 160;
-  const radius = size / 2 - 4;
-  const inner  = radius * 0.58;
-  const color  = d3.scaleOrdinal().domain(data.map(d => d.name)).range(COLORS);
-
-  const pie    = d3.pie().value(d => d.value).sort(null).padAngle(0.03);
-  const arc    = d3.arc().innerRadius(inner).outerRadius(radius).cornerRadius(3);
-  const arcBig = d3.arc().innerRadius(inner).outerRadius(radius + 6).cornerRadius(3);
-
-  const svg = d3.select(chartEl).append('svg')
-    .attr('width', size).attr('height', size);
-
-  const g = svg.append('g').attr('transform', `translate(${size/2},${size/2})`);
-
-  const paths = g.selectAll('path')
-    .data(pie(data))
-    .enter()
-    .append('path')
-    .attr('fill', d => color(d.data.name))
-    .attr('d', arc)
+  // Dots with tooltips
+  g.selectAll('.comfort-dot')
+    .data(data).enter()
+    .append('circle')
+    .attr('cx', d => x(d.date))
+    .attr('cy', d => y(d.value))
+    .attr('r', 5)
+    .attr('fill', '#C65D07')
+    .attr('stroke', 'var(--bg)')
+    .attr('stroke-width', 2)
+    .style('opacity', 0)
     .style('cursor', 'pointer')
-    .style('transition', 'transform 0.2s ease')
     .on('mouseover', function(event, d) {
-      d3.select(this).attr('d', arcBig);
+      d3.select(this).attr('r', 7);
+      const log = sorted.find(l => new Date(l.date).toDateString() === d.date.toDateString());
+      const dateStr = d.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      showTooltip(event, dateStr, d.value, log?.symptoms || []);
     })
-    .on('mouseout', function(event, d) {
-      d3.select(this).attr('d', arc);
-    });
+    .on('mouseleave', function() {
+      d3.select(this).attr('r', 5);
+      hideTooltip();
+    })
+    .transition().duration(400).delay(900)
+    .style('opacity', 1);
 
-  // Animate draw in
-  paths.each(function(d) {
-    const el   = d3.select(this);
-    const end  = { startAngle: d.startAngle, endAngle: d.endAngle };
-    const start = { startAngle: d.startAngle, endAngle: d.startAngle };
-    el.attr('d', arc(start));
-    el.transition().duration(700).delay((d, i) => i * 80).ease(d3.easeCubicOut)
-      .attrTween('d', function() {
-        const interpolate = d3.interpolate(start, end);
-        return t => arc(interpolate(t));
-      });
+  // Axes
+  g.append('g').attr('class','d3-axis')
+    .call(d3.axisLeft(y).ticks(5));
+  g.append('g').attr('class','d3-axis')
+    .attr('transform', `translate(0,${iH})`)
+    .call(d3.axisBottom(x).ticks(Math.min(data.length, 6)).tickFormat(d3.timeFormat('%b %d')));
+
+  // Episode markers
+  const episodes = getEpisodes();
+  const epMap = {};
+  episodes.forEach(ep => { epMap[ep.date] = ep; });
+
+  sorted.forEach(log => {
+    const ep = epMap[log.date];
+    if (!ep) return;
+    const d = { date: new Date(log.date), value: log.comfort || 5 };
+    g.append('circle')
+      .attr('cx', x(d.date))
+      .attr('cy', y(d.value))
+      .attr('r', 8)
+      .attr('fill', 'none')
+      .attr('stroke', '#e74c3c')
+      .attr('stroke-width', 2)
+      .style('cursor', 'pointer')
+      .on('mouseover', function(event) {
+        const dateStr = d.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        tooltip.innerHTML = `
+          <div class="an-tooltip-date">⚠️ Episode — ${dateStr}</div>
+          <div class="an-tooltip-syms" style="margin-top:4px">Triggers: ${ep.triggers.join(', ')}<br>${ep.stepsCompleted} steps completed</div>
+        `;
+        tooltip.classList.add('visible');
+      })
+      .on('mouseleave', hideTooltip);
   });
 
-  // Center label
-  const center = document.createElement('div');
-  center.className = 'donut-center';
-  center.innerHTML = `
-    <div class="donut-center-val">${total}</div>
-    <div class="donut-center-lbl">episodes</div>
-  `;
-  chartEl.style.position = 'relative';
-  chartEl.appendChild(center);
-
-  // Legend
-  if (legendEl) {
-    data.forEach((d, i) => {
-      const item = document.createElement('div');
-      item.className = 'donut-leg-item';
-      item.style.animationDelay = `${0.3 + i * 0.08}s`;
-      const pct = Math.round((d.value / total) * 100);
-      item.innerHTML = `
-        <div class="donut-leg-dot" style="background:${COLORS[i]}"></div>
-        <div class="donut-leg-name">${d.name}</div>
-        <div class="donut-leg-pct">${pct}%</div>
-      `;
-      legendEl.appendChild(item);
-    });
+  // Footer
+  if (footerEl && sorted.length >= 2) {
+    const diff = (sorted[sorted.length-1].comfort || 5) - (sorted[0].comfort || 5);
+    if (Math.abs(diff) < 1) footerEl.textContent = 'Your comfort has been stable during this period.';
+    else if (diff > 0) footerEl.textContent = `Comfort improved by ${diff.toFixed(1)} points — trending better.`;
+    else footerEl.textContent = `Comfort dropped by ${Math.abs(diff).toFixed(1)} points — consider reviewing your triggers.`;
   }
 }
 
-
-/* ── STREAK TRACKER ── */
+/* ── CALENDAR STREAK TRACKER ── */
 function drawStreakTracker(allLogs) {
   const dotsEl   = document.getElementById('streakDots');
   const footerEl = document.getElementById('streakFooter');
   if (!dotsEl) return;
   dotsEl.innerHTML = '';
 
-  // Build a set of logged dates
-  const loggedDates = new Set(allLogs.map(l => l.date));
+  const loggedMap = {};
+  allLogs.forEach(l => { loggedMap[l.date] = l; });
+  const loggedDates = new Set(Object.keys(loggedMap));
+  const epMap = {};
+  getEpisodes().forEach(ep => { epMap[ep.date] = ep; });
+  const today    = new Date();
+  const todayKey = today.toISOString().split('T')[0];
 
-  // Calculate current streak
+  // Current streak
   let currentStreak = 0;
-  const today = new Date();
   for (let i = 0; i < 365; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const key = d.toISOString().split('T')[0];
-    if (loggedDates.has(key)) {
-      currentStreak++;
-    } else if (i > 0) {
-      break;
-    }
+    if (loggedDates.has(key)) currentStreak++;
+    else if (i > 0) break;
   }
 
-  // Calculate best streak
+  // Best streak
   let bestStreak = 0, tempStreak = 0;
   const sortedDates = [...loggedDates].sort();
   for (let i = 0; i < sortedDates.length; i++) {
-    if (i === 0) {
-      tempStreak = 1;
-    } else {
-      const prev = new Date(sortedDates[i-1]);
-      const curr = new Date(sortedDates[i]);
-      const diff = (curr - prev) / (1000 * 60 * 60 * 24);
-      if (diff === 1) {
-        tempStreak++;
-      } else {
-        bestStreak = Math.max(bestStreak, tempStreak);
-        tempStreak = 1;
-      }
+    if (i === 0) { tempStreak = 1; }
+    else {
+      const diff = (new Date(sortedDates[i]) - new Date(sortedDates[i-1])) / 86400000;
+      if (diff === 1) tempStreak++;
+      else { bestStreak = Math.max(bestStreak, tempStreak); tempStreak = 1; }
     }
     bestStreak = Math.max(bestStreak, tempStreak);
   }
 
-  // This week count
+  // This week
   const weekStart = new Date(today);
   weekStart.setDate(today.getDate() - today.getDay());
   let thisWeek = 0;
@@ -309,48 +337,120 @@ function drawStreakTracker(allLogs) {
     if (loggedDates.has(d.toISOString().split('T')[0])) thisWeek++;
   }
 
-  // Update stat elements
+  // Update stats
   const currentEl = document.getElementById('st-current-streak');
   const bestEl    = document.getElementById('st-best-streak');
   const totalEl   = document.getElementById('st-total-days');
   const weekEl    = document.getElementById('st-this-week');
+  if (currentEl) currentEl.innerHTML = `${currentStreak}d<div style="font-size:10px;color:var(--mu);margin-top:2px;letter-spacing:0.1em;text-transform:uppercase;">streak</div>`;
+  if (bestEl)    bestEl.textContent  = `${bestStreak}d`;
+  if (totalEl)   totalEl.textContent = `${allLogs.length}d`;
+  if (weekEl)    weekEl.textContent  = `${thisWeek}/7`;
 
-  if (currentEl) currentEl.innerHTML = `${currentStreak}<div style="font-size:10px;color:var(--mu);margin-top:2px;letter-spacing:0.1em;text-transform:uppercase;">day streak</div>`;
-  if (bestEl)    bestEl.textContent    = `${bestStreak}d`;
-  if (totalEl)   totalEl.textContent   = `${allLogs.length}d`;
-  if (weekEl)    weekEl.textContent    = `${thisWeek}/7`;
+  // Calendar grid — 5 weeks
+  const gridStart = new Date(today);
+  gridStart.setDate(today.getDate() - today.getDay() - 28);
 
-  // Build 30-day dot grid
-  for (let i = 29; i >= 0; i--) {
-    const d   = new Date(today);
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().split('T')[0];
-    const isToday  = i === 0;
-    const isFuture = d > today;
-    const logged   = loggedDates.has(key);
+  const labelRow = document.createElement('div');
+  labelRow.className = 'cal-day-labels';
+  ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d => {
+    const lbl = document.createElement('div');
+    lbl.className = 'cal-day-label';
+    lbl.textContent = d;
+    labelRow.appendChild(lbl);
+  });
+  dotsEl.appendChild(labelRow);
 
-    const dot = document.createElement('div');
-    dot.className = 'streak-dot';
-    dot.style.animationDelay = `${(29 - i) * 0.02}s`;
+  const weeksEl = document.createElement('div');
+  weeksEl.className = 'cal-weeks';
 
-    if (isFuture)     dot.classList.add('future');
-    else if (isToday && logged) dot.classList.add('today');
-    else if (logged)  dot.classList.add('logged');
-    else              dot.classList.add('missed');
+  for (let w = 0; w < 5; w++) {
+    const weekRow = document.createElement('div');
+    weekRow.className = 'cal-week';
 
-    dot.title = `${key}${logged ? ' ✓' : ' —'}`;
-    dotsEl.appendChild(dot);
+    for (let d = 0; d < 7; d++) {
+      const date    = new Date(gridStart);
+      date.setDate(gridStart.getDate() + w * 7 + d);
+      const key     = date.toISOString().split('T')[0];
+      const logged  = loggedMap[key];
+      const isFuture = date > today;
+      const isToday  = key === todayKey;
+
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell';
+      cell.style.animationDelay = `${(w * 7 + d) * 0.015}s`;
+
+      if (isFuture) {
+        cell.classList.add('future');
+      } else if (logged) {
+        const comfort = logged.comfort || 5;
+        if (comfort >= 7)      cell.classList.add('comfort-high');
+        else if (comfort >= 4) cell.classList.add('comfort-mid');
+        else                   cell.classList.add('comfort-low');
+        if (isToday) cell.classList.add('today');
+        cell.dataset.date    = key;
+        cell.dataset.comfort  = comfort;
+        cell.dataset.symptoms = JSON.stringify(logged.symptoms || []);
+        if (epMap[key]) {
+          cell.style.outline = '2px solid #e74c3c';
+          cell.style.outlineOffset = '1px';
+          cell.dataset.episode = JSON.stringify(epMap[key]);
+        }
+      } else {
+        cell.classList.add('missed');
+        cell.dataset.date = key;
+      }
+
+      weekRow.appendChild(cell);
+    }
+    weeksEl.appendChild(weekRow);
   }
 
-  // Footer message
+  dotsEl.appendChild(weeksEl);
+
+  // Tooltip events on calendar cells
+  weeksEl.querySelectorAll('.cal-cell').forEach(cell => {
+    cell.addEventListener('mouseenter', e => {
+      const date     = cell.dataset.date;
+      const comfort  = cell.dataset.comfort;
+      const symptoms = cell.dataset.symptoms ? JSON.parse(cell.dataset.symptoms) : [];
+      const episode  = cell.dataset.episode  ? JSON.parse(cell.dataset.episode)  : null;
+      if (!date) return;
+      const dateStr = new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      if (comfort) {
+        const symText = symptoms.length
+          ? symptoms.map(s => typeof s === 'object' ? s.name : s).join(', ')
+          : 'No symptoms';
+        tooltip.innerHTML = `
+          <div class="an-tooltip-date">${dateStr}</div>
+          <div class="an-tooltip-comfort">${comfort}<span style="font-size:11px;color:var(--mu)">/10</span></div>
+          <div class="an-tooltip-syms">${symText}</div>
+          ${episode ? `<div class="an-tooltip-syms" style="color:#e74c3c;margin-top:4px">⚠️ Episode: ${episode.triggers.join(', ')}</div>` : ''}
+        `;
+        tooltip.classList.add('visible');
+      } else {
+        tooltip.innerHTML = `<div class="an-tooltip-date">${dateStr}</div><div class="an-tooltip-syms" style="margin-top:4px">Not logged</div>`;
+        tooltip.classList.add('visible');
+      }
+    });
+    cell.addEventListener('mouseleave', hideTooltip);
+  });
+
+  // Color legend
+  const calLegend = document.createElement('div');
+  calLegend.className = 'cal-legend';
+  calLegend.innerHTML = `
+    <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#27ae60"></div>Good</div>
+    <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--or)"></div>Okay</div>
+    <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#e74c3c"></div>Rough</div>
+    <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--su);border:1px solid var(--bd)"></div>Missed</div>
+  `;
+  dotsEl.appendChild(calLegend);
+
   if (footerEl) {
-    if (currentStreak >= 7) {
-      footerEl.textContent = `🔥 ${currentStreak}-day streak! Keep it going.`;
-    } else if (currentStreak > 0) {
-      footerEl.textContent = `${currentStreak} day${currentStreak > 1 ? 's' : ''} in a row — best is ${bestStreak} days.`;
-    } else {
-      footerEl.textContent = `Log today to start a new streak. Your best was ${bestStreak} days.`;
-    }
+    if (currentStreak >= 7) footerEl.textContent = `🔥 ${currentStreak}-day streak! You're on a roll.`;
+    else if (currentStreak > 0) footerEl.textContent = `${currentStreak} day${currentStreak > 1 ? 's' : ''} in a row — best is ${bestStreak} days.`;
+    else footerEl.textContent = `Log today to start a new streak. Your best was ${bestStreak} days.`;
   }
 }
 
@@ -360,16 +460,16 @@ function render() {
   const logs    = filterLogs(allLogs, currentDays);
 
   if (allLogs.length === 0) {
-    document.getElementById('emptyState').style.display   = 'flex';
+    document.getElementById('emptyState').style.display    = 'flex';
     document.getElementById('analyticsWrap').style.display = 'none';
     return;
   }
 
-  document.getElementById('emptyState').style.display   = 'none';
+  document.getElementById('emptyState').style.display    = 'none';
   document.getElementById('analyticsWrap').style.display = 'flex';
 
   drawStats(logs);
-  drawSymptomBars(logs);
+  drawSymptomProgression(logs);
   drawStreakTracker(allLogs);
 }
 

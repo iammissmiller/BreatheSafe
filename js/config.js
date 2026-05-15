@@ -1,4 +1,3 @@
 const API_KEY =
 "cdd2976e725237deb098721dbe53d8aa";
-const GEMINI_KEY = 'AIzaSyAfkKbV-ax3TIlcF18Fv6US1v51M-q3KK0';
 const GROQ_KEY = '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';

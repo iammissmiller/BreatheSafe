@@ -92,7 +92,7 @@
     document.getElementById('hz-done').classList.remove('active');
 
     const el = document.getElementById(id);
-    el.style.display = id === 'hz-protocol' ? 'flex' : 'flex';
+    el.style.display = 'flex';
     el.classList.add('active');
   }
 
@@ -348,8 +348,8 @@ Rules:
 
     const data = groqResult.status === 'fulfilled' ? groqResult.value : FALLBACK;
 
-    goBtn.classList.remove('loading');
     renderProtocol(data);
+    goBtn.classList.remove('loading');
   });
 
   // ── NEXT / SKIP ──────────────────────────────────────────
@@ -359,6 +359,10 @@ Rules:
   // ── RESET ────────────────────────────────────────────────
   function doReset() {
     clearTimer();
+    // Save partial episode if steps were started
+    if (protocol && currentStep > 0) {
+      saveEpisode([...selectedTriggers], currentStep);
+    }
     selectedTriggers.clear();
     protocol    = null;
     currentStep = -1;
@@ -383,5 +387,24 @@ Rules:
 
   if (resetBtn) resetBtn.addEventListener('click', doReset);
   if (doneBtn)  doneBtn.addEventListener('click',  doReset);
+
+  // Back button from protocol to trigger selection
+  const backBtn = document.getElementById('hz-back-btn');
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      clearTimer();
+      document.getElementById('hz-protocol').classList.remove('active');
+      document.getElementById('hz-protocol').style.display = 'none';
+      document.getElementById('hz-idle').style.display = 'flex';
+      // Reset loading animation rows
+      ['hz-a0','hz-a1','hz-a2','hz-a3'].forEach(id =>
+        document.getElementById(id).classList.remove('lit','done'));
+      showLeftStep('hz-s0');
+      protocol    = null;
+      currentStep = -1;
+      goBtn.disabled = selectedTriggers.size === 0;
+      goBtn.classList.remove('loading');
+    });
+  }
 
 })();

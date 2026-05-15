@@ -21,7 +21,7 @@
       <a class="nav-app-link" href="saferoute.html">SafeRoute</a>
       <a class="nav-app-link" href="symptoms.html">Symptoms</a>
       <a class="nav-app-link" href="analytics.html">Analytics</a>
-      <a class="nav-app-link" href="helpzone.html">HelpZone</a>
+      <a class="nav-app-link active" href="helpzone.html">HelpZone</a>
     </div>
     <div class="nav-right">
       <button class="theme-toggle" id="themeBtn">☀️</button>
@@ -83,7 +83,7 @@
 
         <div style="display:flex;flex-direction:column;gap:6px;">
           <div class="hz-section-label">Anything to add? (optional)</div>
-          <textarea class="hz-textarea" id="hz-note" rows="2"
+          <textarea class="hz-textarea" id="hz-note" rows="1"
             placeholder="e.g. started after going outside, took inhaler already…"></textarea>
         </div>
 
@@ -129,7 +129,10 @@
       <div class="hz-protocol" id="hz-protocol">
 
         <div class="hz-proto-header">
-          <div class="hz-proto-eyebrow" id="hz-proto-eyebrow">Action Plan</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <div class="hz-proto-eyebrow" id="hz-proto-eyebrow">Action Plan</div>
+            <button id="hz-back-btn" style="background:none;border:none;font-size:0.75rem;color:var(--mu);cursor:pointer;font-family:var(--font-sans);">← Back</button>
+          </div>
           <div class="hz-proto-title" id="hz-proto-title">—</div>
           <div class="hz-proto-intro" id="hz-proto-intro">—</div>
         </div>

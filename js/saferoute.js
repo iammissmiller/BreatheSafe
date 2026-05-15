@@ -11,13 +11,35 @@
   const GROQ_URL   = 'https://api.groq.com/openai/v1/chat/completions';
   const GROQ_MODEL = 'llama-3.1-8b-instant';
 
-  const ZONE_OFFSETS = [
-    { label: 'City Park North',  dlat:  0.015, dlng:  0.005 },
-    { label: 'Riverside Walk',   dlat: -0.010, dlng:  0.018 },
-    { label: 'Green Belt East',  dlat:  0.008, dlng: -0.020 },
-    { label: 'West Commons',     dlat: -0.018, dlng: -0.008 },
-    { label: 'Hillside Reserve', dlat:  0.022, dlng:  0.003 },
+  // Route waypoint shifts to simulate alternatives
+  const ROUTE_VARIANTS = [
+    { name: 'Direct Route',   emoji: '🛣️', shift: [0, 0] },
+    { name: 'Northern Path',  emoji: '🌿', shift: [0.15, 0] },
+    { name: 'Southern Path',  emoji: '💧', shift: [-0.15, 0] },
   ];
+
+  const ZONE_OFFSETS = [
+    { dlat:  0.015, dlng:  0.005 },
+    { dlat: -0.010, dlng:  0.018 },
+    { dlat:  0.008, dlng: -0.020 },
+    { dlat: -0.018, dlng: -0.008 },
+    { dlat:  0.022, dlng:  0.003 },
+  ];
+
+  const ZONE_DIRECTION_LABELS = ['North Zone', 'East Zone', 'South Zone', 'West Zone', 'Central Zone'];
+  async function reverseGeocodeName(lat, lng, fallbackIdx) {
+    try {
+      const url  = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=14&accept-language=en`;
+      const res  = await fetch(url);
+      const data = await res.json();
+      // Try suburb, neighbourhood, village, town in order
+      const addr = data?.address;
+      const name = addr?.suburb || addr?.neighbourhood || addr?.village || addr?.town || addr?.city_district || null;
+      return name || ZONE_DIRECTION_LABELS[fallbackIdx] || `Zone ${fallbackIdx + 1}`;
+    } catch {
+      return ZONE_DIRECTION_LABELS[fallbackIdx] || `Zone ${fallbackIdx + 1}`;
+    }
+  }
 
   // ── DOM ──
   const originInput = document.getElementById('sr-origin');
@@ -68,10 +90,7 @@
     goBtn.disabled = on;
   }
 
-  function clearMap() {
-    markerLayer.clearLayers();
-    routeLayer.clearLayers();
-  }
+
 
   function formatDistance(meters) {
     return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.round(meters)} m`;
@@ -102,14 +121,25 @@
   }
 
   // ── OSRM ROUTING ──
-  async function fetchRoute(origin, dest) {
-    const url  = `${OSRM_BASE}/${origin.lng},${origin.lat};${dest.lng},${dest.lat}?overview=full&geometries=geojson&steps=false`;
+  async function fetchRoute(origin, dest, waypointShift) {
+    let url;
+    if (waypointShift[0] !== 0 || waypointShift[1] !== 0) {
+      // Scale shift proportionally to route distance (deg between points)
+      const latDiff = Math.abs(dest.lat - origin.lat);
+      const lngDiff = Math.abs(dest.lng - origin.lng);
+      const scale   = Math.max(latDiff, lngDiff) * 0.3; // 30% of route span
+      const midLat  = (origin.lat + dest.lat) / 2 + waypointShift[0] * scale;
+      const midLng  = (origin.lng + dest.lng) / 2 + waypointShift[1] * scale;
+      url = `${OSRM_BASE}/${origin.lng},${origin.lat};${midLng},${midLat};${dest.lng},${dest.lat}?overview=full&geometries=geojson&steps=false`;
+    } else {
+      url = `${OSRM_BASE}/${origin.lng},${origin.lat};${dest.lng},${dest.lat}?overview=full&geometries=geojson&steps=false`;
+    }
     const res  = await fetch(url);
     const data = await res.json();
     if (data.code !== 'Ok' || !data.routes.length) throw new Error('Could not find a route between these locations.');
     const route = data.routes[0];
     return {
-      coords:   route.geometry.coordinates.map(c => [c[1], c[0]]), // [lat, lng]
+      coords:   route.geometry.coordinates.map(c => [c[1], c[0]]),
       distance: route.distance,
       duration: route.duration,
     };
@@ -134,59 +164,75 @@
   }
 
   // ── COLOR-CODED ROUTE ──
-  function drawColoredRoute(coords, aqiPoints) {
-    routeLayer.clearLayers();
-
+  function drawColoredRoute(coords, aqiPoints, isActive) {
     if (aqiPoints.length < 2) {
-      // Single color fallback
-      const aqi  = aqiPoints[0]?.aqi || 65;
-      const info = aqiInfo(aqi);
-      L.polyline(coords, { color: info.color, weight: 5, opacity: 0.85 }).addTo(routeLayer);
+      const info = aqiInfo(aqiPoints[0]?.aqi || 65);
+      L.polyline(coords, {
+        color: info.color, weight: isActive ? 5 : 3,
+        opacity: isActive ? 0.9 : 0.35, dashArray: isActive ? null : '6,8'
+      }).addTo(routeLayer);
       return;
     }
 
-    // Split route into segments, color each by nearest AQI point
     const segmentSize = Math.floor(coords.length / aqiPoints.length);
-
     aqiPoints.forEach((pt, i) => {
       const start = i * segmentSize;
       const end   = i === aqiPoints.length - 1 ? coords.length : (i + 1) * segmentSize + 1;
       const seg   = coords.slice(start, end);
       const info  = aqiInfo(pt.aqi);
-
       if (seg.length >= 2) {
         L.polyline(seg, {
-          color:   info.color,
-          weight:  5,
-          opacity: 0.85,
-          lineCap: 'round',
-          lineJoin: 'round',
+          color: info.color, weight: isActive ? 5 : 3,
+          opacity: isActive ? 0.9 : 0.35,
+          dashArray: isActive ? null : '6,8',
+          lineCap: 'round', lineJoin: 'round',
         }).addTo(routeLayer);
       }
     });
   }
 
-  // ── RENDER AQI STRIP ──
-  function renderAQIStrip(aqiPoints) {
-    const strip = document.getElementById('sr-aqi-strip');
-    strip.innerHTML = '';
-    const maxAqi = Math.max(...aqiPoints.map(p => p.aqi), 1);
+  // ── BADGE HELPER ──
+  function badge(routes, i, safestIdx) {
+    const minDur     = Math.min(...routes.map(r => r.duration));
+    const fastestIdx = routes.findIndex(r => r.duration === minDur);
+    if (i === safestIdx && i === fastestIdx) return '<div style="font-size:0.65rem;color:var(--or);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-left:4px">★ Best & Fastest</div>';
+    if (i === safestIdx)  return '<div style="font-size:0.65rem;color:var(--or);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-left:4px">★ Cleanest Air</div>';
+    if (i === fastestIdx) return '<div style="font-size:0.65rem;color:#2a9d8f;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-left:4px">⚡ Fastest</div>';
+    return '';
+  }
 
-    aqiPoints.forEach((pt, i) => {
-      const info   = aqiInfo(pt.aqi);
-      const height = Math.max(20, (pt.aqi / Math.max(maxAqi, 220)) * 36);
-      const bar    = document.createElement('div');
-      bar.className = 'sr-aqi-bar';
-      bar.style.cssText = `height:${height}px;background:${info.color};opacity:0.85;`;
-      bar.title = `Point ${i+1}: AQI ${pt.aqi} — ${info.label}`;
+  // ── RENDER ROUTE CARDS ──
+  function renderRouteCards(routes, activeIndex, safestIdx, onSelect) {
+    const existing = document.getElementById('sr-route-cards');
+    if (existing) existing.remove();
 
-      // Animate in
-      bar.style.transform = 'scaleY(0)';
-      bar.style.transformOrigin = 'bottom';
-      bar.style.transition = `transform 0.4s ease ${i * 0.08}s`;
-      strip.appendChild(bar);
-      requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.transform = 'scaleY(1)'; }));
+    const wrap = document.createElement('div');
+    wrap.id = 'sr-route-cards';
+    wrap.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin:10px 20px 0;';
+
+    routes.forEach((r, i) => {
+      const info = aqiInfo(r.avgAqi);
+      const card = document.createElement('div');
+      card.className = `sr-route-card-item${i === activeIndex ? ' active' : ''}`;
+      card.innerHTML = `
+        <div style="font-size:1.2rem">${r.emoji}</div>
+        <div style="flex:1">
+          <div style="font-size:0.83rem;font-weight:600;color:var(--wm)">${r.name}</div>
+          <div style="font-size:0.72rem;color:var(--mu);margin-top:2px">${formatDistance(r.distance)} · ${formatDuration(r.duration)}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:600;color:${info.color};">${r.avgAqi}</div>
+          <div style="font-size:0.65rem;color:var(--mu);text-transform:uppercase;letter-spacing:0.08em;">${info.label}</div>
+        </div>
+        ${badge(routes, i, safestIdx)}
+      `;
+      card.addEventListener('click', () => onSelect(i));
+      wrap.appendChild(card);
     });
+
+    // Insert before the warning
+    const warning = document.getElementById('sr-warning');
+    warning.parentElement.insertBefore(wrap, warning);
   }
 
   // ── RENDER ZONE LIST ──
@@ -211,42 +257,50 @@
     });
   }
 
-  // ── GROQ INSIGHT ──
+  // ── GROQ — All 3 sections ──
   async function fetchGroqInsight(originName, destName, distance, duration, avgAqi, aqiPoints) {
     const profile = {
       name:        localStorage.getItem('bs-name') || 'there',
       conditions:  localStorage.getItem('bs-conditions') || 'none',
       sensitivity: localStorage.getItem('bs-sensitivity') || 'medium',
+      smoke:       localStorage.getItem('bs-smoke') || 'no',
     };
 
     const aqiWorst = Math.max(...aqiPoints.map(p => p.aqi));
     const aqiBest  = Math.min(...aqiPoints.map(p => p.aqi));
+    const aqiLabel = aqiWorst <= 50 ? 'Good' : aqiWorst <= 100 ? 'Moderate' : aqiWorst <= 150 ? 'Poor' : 'Very Poor';
 
-    const prompt = `You are a respiratory health assistant in the BreatheSafe app.
+    const now  = new Date().getHours();
+    const prompt = `You are a health and air quality AI in BreatheSafe. Respond ONLY with valid JSON, no markdown, no backticks.
 
-User: ${profile.name}, conditions: ${profile.conditions}, sensitivity: ${profile.sensitivity}.
+User: name=${profile.name}, conditions=${profile.conditions}, sensitivity=${profile.sensitivity}, smoker=${profile.smoke}.
 Route: ${originName} to ${destName}, ${formatDistance(distance)}, ~${formatDuration(duration)}.
-Air quality: avg AQI ${avgAqi}, worst point ${aqiWorst}, best point ${aqiBest}.
+AQI: avg=${avgAqi}, worst=${aqiWorst} (${aqiLabel}), best=${aqiBest}. Current hour: ${now}:00.
 
-Give 2-3 sentences of personalised, actionable advice for this specific journey. Include:
-1. Whether it's safe to travel and any precautions (mask, inhaler, windows up)
-2. The best time to travel based on typical AQI patterns (morning is usually cleaner)
-Be direct, warm, specific. No generic advice. No bullet points.`;
+Rules:
+- insight: 3-4 sentences. Write for ANY person travelling this route, not just patients. Mention the AQI number and what it means for a normal person (e.g. eye irritation, fatigue, breathing discomfort). Mention if the route is safe or risky. Be warm and informative, not clinical.
+- warning: If AQI>100 OR user has asthma/COPD/allergies, write 2-3 sentences with SPECIFIC actions — mention exact items (N95 mask, rescue inhaler, antihistamine, windows closed, AC on recirculate). Tailor to their conditions. If AQI<=100 and no conditions, return null.
+- best_time: ONE sentence with EXACT time window like "6:00 AM – 8:00 AM" or "8:00 PM – 10:00 PM". Base on AQI — poor AQI means strict window, good AQI means any time. Always include the actual times in numbers.
+
+{"insight":"...","warning":"...or null","best_time":"..."}`;
 
     const res = await fetch(GROQ_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
-      body: JSON.stringify({ model: GROQ_MODEL, max_tokens: 150, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model: GROQ_MODEL, max_tokens: 400, messages: [{ role: 'user', content: prompt }] }),
     });
     const data = await res.json();
-    return data?.choices?.[0]?.message?.content?.trim() || null;
-  }
-
-  // ── BEST TIME ──
-  function getBestTime(avgAqi) {
-    if (avgAqi <= 50)  return 'Any time is fine — air quality is good on this route.';
-    if (avgAqi <= 100) return 'Early morning (6–9 AM) is best when traffic and pollution are lower.';
-    return 'Travel early morning (before 8 AM) or after 8 PM to avoid peak pollution hours.';
+    const text = data?.choices?.[0]?.message?.content?.trim();
+    try {
+      return JSON.parse(text);
+    } catch {
+      // Fallback if JSON parse fails
+      return {
+        insight:   text || 'Check the map for air quality conditions along your route.',
+        warning:   avgAqi > 100 ? 'Air quality is poor — consider wearing a mask.' : null,
+        best_time: avgAqi <= 50 ? 'Any time is suitable for this route.' : 'Early morning travel is recommended for cleaner air.',
+      };
+    }
   }
 
   // ── MAIN FLOW ──
@@ -257,7 +311,8 @@ Be direct, warm, specific. No generic advice. No bullet points.`;
 
     errorBox.classList.remove('visible');
     setLoading(true);
-    clearMap();
+    markerLayer.clearLayers();
+    routeLayer.clearLayers();
     resultsBox.classList.remove('visible');
     idleBox.style.display = 'none';
 
@@ -269,88 +324,125 @@ Be direct, warm, specific. No generic advice. No bullet points.`;
 
     try {
       // 1. Geocode
-      let origin, dest;
-      if (originInput._coords) origin = originInput._coords;
-      else origin = await geocode(originQ);
+      let origin;
+      if (originInput._coords) {
+        origin = originInput._coords;
+      } else if (userCoords && originQ.toLowerCase() === 'current location') {
+        origin = { ...userCoords, name: 'Your Location' };
+      } else {
+        origin = await geocode(originQ);
+      }
+      let dest = destInput._coords || await geocode(destQ);
 
-      if (destInput._coords) dest = destInput._coords;
-      else dest = await geocode(destQ);
+      // 2. Fetch all 3 routes in parallel
+      const routeResults = await Promise.all(
+        ROUTE_VARIANTS.map(v => fetchRoute(origin, dest, v.shift).catch(() => null))
+      );
 
-      // 2. Real route from OSRM
-      const route = await fetchRoute(origin, dest);
+      // Filter out failed routes
+      const validRoutes = routeResults.map((r, i) => r ? { ...ROUTE_VARIANTS[i], ...r } : null).filter(Boolean);
+      if (!validRoutes.length) throw new Error('Could not find any routes between these locations.');
 
-      // 3. Fit map
-      map.fitBounds(route.coords, { padding: [50, 50] });
+      // 3. Sample AQI along each route
+      const routesWithAQI = await Promise.all(
+        validRoutes.map(async r => {
+          const aqiPoints = await sampleAQIAlongRoute(r.coords);
+          const avgAqi    = Math.round(aqiPoints.reduce((s, p) => s + p.aqi, 0) / aqiPoints.length);
+          return { ...r, aqiPoints, avgAqi };
+        })
+      );
 
-      // 4. Sample AQI along actual route
-      const aqiPoints = await sampleAQIAlongRoute(route.coords);
-      const avgAqi    = Math.round(aqiPoints.reduce((s, p) => s + p.aqi, 0) / aqiPoints.length);
-      const aqiGrade  = aqiInfo(avgAqi);
-
-      // 5. Sample safe zones around origin
-      const zonePromises = ZONE_OFFSETS.map(async z => {
-        const lat = origin.lat + z.dlat;
-        const lng = origin.lng + z.dlng;
-        const aqi = await fetchAQI(lat, lng);
-        return { label: z.label, lat, lng, aqi };
+      // 4. Deduplicate routes that are too similar (same distance within 5%)
+      const uniqueRoutes = routesWithAQI.filter((r, i) => {
+        if (i === 0) return true;
+        return !routesWithAQI.slice(0, i).some(prev =>
+          Math.abs(prev.distance - r.distance) / prev.distance < 0.05
+        );
       });
-      const allZones  = await Promise.all(zonePromises);
+      const finalRoutes = uniqueRoutes.length >= 1 ? uniqueRoutes : routesWithAQI;
+
+      // 5. Find safest (lowest AQI, tiebreak by fastest)
+      const minAqi    = Math.min(...finalRoutes.map(r => r.avgAqi));
+      const safestIdx = finalRoutes.indexOf(
+        finalRoutes
+          .filter(r => r.avgAqi === minAqi)
+          .reduce((a, b) => a.duration <= b.duration ? a : b)
+      );
+      let activeIndex = safestIdx;
+
+      // 6a. Fit map to safest route
+      map.fitBounds(finalRoutes[safestIdx].coords, { padding: [50, 50] });
+
+      // 6. Sample safe zones with real names
+      const allZones = await Promise.all(ZONE_OFFSETS.map(async z => {
+        const lat   = origin.lat + z.dlat;
+        const lng   = origin.lng + z.dlng;
+        const [aqi, label] = await Promise.all([fetchAQI(lat, lng), reverseGeocodeName(lat, lng, ZONE_OFFSETS.indexOf(z))]);
+        return { label, lat, lng, aqi };
+      }));
       const cleanZones = allZones.filter(z => z.aqi <= 100).sort((a, b) => a.aqi - b.aqi);
 
-      // 6. Draw color-coded route
-      drawColoredRoute(route.coords, aqiPoints);
+      // 7. Draw function
+      function drawAllRoutes(activeIdx) {
+        routeLayer.clearLayers();
+        markerLayer.clearLayers();
 
-      // 7. Origin / dest markers
-      L.marker([origin.lat, origin.lng], {
-        icon: L.divIcon({
-          className: '',
-          html: `<div style="width:14px;height:14px;border-radius:50%;background:#C65D07;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>`,
-          iconSize: [14, 14], iconAnchor: [7, 7],
-        })
-      }).bindPopup(`<b>📍 ${origin.name}</b>`).addTo(markerLayer);
+        finalRoutes.forEach((r, i) => {
+          drawColoredRoute(r.coords, r.aqiPoints, i === activeIdx);
+        });
 
-      L.marker([dest.lat, dest.lng], {
-        icon: L.divIcon({
-          className: '',
-          html: `<div style="width:14px;height:14px;border-radius:50%;background:#2a9d8f;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>`,
-          iconSize: [14, 14], iconAnchor: [7, 7],
-        })
-      }).bindPopup(`<b>🏁 ${dest.name}</b>`).addTo(markerLayer);
+        // AQI dots on active route
+        finalRoutes[activeIdx].aqiPoints.forEach(pt => {
+          const info = aqiInfo(pt.aqi);
+          L.circleMarker([pt.lat, pt.lng], {
+            radius: 5, color: '#fff', weight: 1.5,
+            fillColor: info.color, fillOpacity: 0.9,
+          }).bindPopup(`AQI ${pt.aqi} — ${info.label}`).addTo(markerLayer);
+        });
 
-      // AQI markers along route
-      aqiPoints.forEach(pt => {
-        const info = aqiInfo(pt.aqi);
-        L.circleMarker([pt.lat, pt.lng], {
-          radius: 5, color: '#fff', weight: 1.5,
-          fillColor: info.color, fillOpacity: 0.9,
-        }).bindPopup(`AQI ${pt.aqi} — ${info.label}`).addTo(markerLayer);
-      });
+        // Origin / dest markers
+        L.marker([origin.lat, origin.lng], {
+          icon: L.divIcon({
+            className: '',
+            html: `<div style="width:14px;height:14px;border-radius:50%;background:#C65D07;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>`,
+            iconSize: [14, 14], iconAnchor: [7, 7],
+          })
+        }).bindPopup(`<b>📍 ${origin.name}</b>`).addTo(markerLayer);
 
-      // 8. Update summary
-      document.getElementById('sr-distance').textContent = formatDistance(route.distance);
-      document.getElementById('sr-duration').textContent = formatDuration(route.duration);
-      document.getElementById('sr-aqi-avg').textContent  = avgAqi;
-      document.getElementById('sr-aqi-grade').textContent = aqiGrade.label;
-      document.getElementById('sr-aqi-grade').style.color = aqiGrade.color;
-
-      // 9. Health warning
-      const warningEl = document.getElementById('sr-warning');
-      const warningText = document.getElementById('sr-warning-text');
-      if (avgAqi > 100) {
-        warningText.textContent = avgAqi > 150
-          ? 'Very poor air quality on this route. Avoid if possible. If you must travel, wear an N95 mask and keep windows closed.'
-          : 'Moderate to poor air quality along this route. Consider wearing a mask, especially if you have asthma or allergies.';
-        warningEl.classList.remove('hidden');
-      } else {
-        warningEl.classList.add('hidden');
+        L.marker([dest.lat, dest.lng], {
+          icon: L.divIcon({
+            className: '',
+            html: `<div style="width:14px;height:14px;border-radius:50%;background:#2a9d8f;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>`,
+            iconSize: [14, 14], iconAnchor: [7, 7],
+          })
+        }).bindPopup(`<b>🏁 ${dest.name}</b>`).addTo(markerLayer);
       }
 
-      // 10. Best time
-      document.getElementById('sr-best-time-val').textContent = getBestTime(avgAqi);
-      document.getElementById('sr-best-time').classList.add('visible');
+      drawAllRoutes(activeIndex);
 
-      // 11. AQI strip
-      renderAQIStrip(aqiPoints);
+      // 8. Route cards with select handler
+      function onRouteSelect(i) {
+        activeIndex = i;
+        drawAllRoutes(i);
+        updateSummary(finalRoutes[i]);
+        renderRouteCards(finalRoutes, i, safestIdx, onRouteSelect);
+      }
+
+      renderRouteCards(finalRoutes, activeIndex, safestIdx, onRouteSelect);
+
+      // 9. Update summary for active route
+      function updateSummary(r) {
+        const aqiGrade = aqiInfo(r.avgAqi);
+        document.getElementById('sr-distance').textContent  = formatDistance(r.distance);
+        document.getElementById('sr-duration').textContent  = formatDuration(r.duration);
+        document.getElementById('sr-aqi-avg').textContent   = r.avgAqi;
+        document.getElementById('sr-aqi-grade').textContent = aqiGrade.label;
+        document.getElementById('sr-aqi-grade').style.color = aqiGrade.color;
+      }
+
+      updateSummary(finalRoutes[activeIndex]);
+
+      // 11. AQI strip for active route
 
       // 12. Zone list
       renderZoneList(cleanZones);
@@ -358,13 +450,28 @@ Be direct, warm, specific. No generic advice. No bullet points.`;
       // 13. Show results
       resultsBox.classList.add('visible');
 
-      // 14. Groq insight (async)
-      fetchGroqInsight(origin.name, dest.name, route.distance, route.duration, avgAqi, aqiPoints)
-        .then(text => {
-          document.getElementById('sr-insight-text').textContent = text || 'Check the air quality strip below for conditions along your route.';
+      // 14. Groq insight for safest route — populates all 3 sections
+      const safest = finalRoutes[safestIdx];
+      fetchGroqInsight(origin.name, dest.name, safest.distance, safest.duration, safest.avgAqi, safest.aqiPoints)
+        .then(result => {
+          document.getElementById('sr-insight-text').textContent = result.insight || 'Check the map for air quality along your route.';
+
+          const warningEl   = document.getElementById('sr-warning');
+          const warningText = document.getElementById('sr-warning-text');
+          if (result.warning && result.warning !== 'null') {
+            warningText.textContent = result.warning;
+            warningEl.style.display = 'flex';
+          } else {
+            warningEl.style.display = 'none';
+          }
+
+          if (result.best_time) {
+            document.getElementById('sr-best-time-val').textContent = result.best_time;
+            document.getElementById('sr-best-time').style.display = 'block';
+          }
         })
         .catch(() => {
-          document.getElementById('sr-insight-text').textContent = 'Check the air quality strip below for conditions along your route.';
+          document.getElementById('sr-insight-text').textContent = 'Check the map for air quality along your route.';
         })
         .finally(() => {
           document.getElementById('sr-insight-spinner').classList.remove('active');
@@ -447,6 +554,23 @@ Be direct, warm, specific. No generic advice. No bullet points.`;
       const { latitude: lat, longitude: lng } = pos.coords;
       userCoords = { lat, lng };
       map.setView([lat, lng], 10);
+
+      // Current location marker — pulsing dot
+      const locIcon = L.divIcon({
+        className: '',
+        html: `<div style="
+          width:16px;height:16px;border-radius:50%;
+          background:#4285f4;border:3px solid #fff;
+          box-shadow:0 0 0 4px rgba(66,133,244,0.3),0 2px 8px rgba(0,0,0,0.3);
+          animation:pulse-loc 2s ease-in-out infinite;
+        "></div>
+        <style>@keyframes pulse-loc{0%,100%{box-shadow:0 0 0 4px rgba(66,133,244,0.3)}50%{box-shadow:0 0 0 8px rgba(66,133,244,0.1)}}</style>`,
+        iconSize: [16, 16], iconAnchor: [8, 8],
+      });
+      L.marker([lat, lng], { icon: locIcon, zIndexOffset: 1000 })
+        .bindPopup('<b>📍 Your Location</b>')
+        .addTo(map);
+
       try {
         const url  = `${OW_REVERSE}?lat=${lat}&lon=${lng}&limit=1&appid=${API_KEY}`;
         const res  = await fetch(url);

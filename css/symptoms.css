@@ -43,8 +43,13 @@ body.dark .particle { background: radial-gradient(rgba(255,179,71,0.08), transpa
   color: var(--or); letter-spacing: 0.04em;
 }
 .nav-right { display: flex; align-items: center; gap: 14px; }
-.nav-back { font-size: 13px; color: var(--sa); transition: color 0.2s; }
-.nav-back:hover { color: var(--or); }
+.nav-app-link {
+  font-size: 13px; font-weight: 400;
+  color: var(--sa); letter-spacing: 0.02em;
+  transition: color 0.3s; text-decoration: none;
+}
+.nav-app-link:hover { color: var(--or); }
+.nav-app-link.active { color: var(--or); font-weight: 600; }
 .theme-toggle {
   width: 34px; height: 34px; border-radius: 50%;
   background: var(--su); border: 1px solid var(--bd);

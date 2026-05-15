@@ -26,6 +26,7 @@
     </div>
 
     <div class="nav-right">
+      <button class="nav-hamburger" id="navHamburger" aria-label="Menu"><span></span><span></span><span></span></button>
       <button class="theme-toggle" id="themeBtn" title="Toggle theme">☀️</button>
       <button class="icon-btn" title="Alerts">🔔</button>
       <div class="avatar" id="avatar">?</div>
@@ -139,5 +140,29 @@
   <script src="../js/dashboard.js"></script>
   <script src="../js/tour.js"></script>
 
+
+  <div class="nav-mobile-menu" id="navMobileMenu">
+    <a href="saferoute.html">SafeRoute</a>
+    <a href="symptoms.html">Symptoms</a>
+    <a href="analytics.html">Analytics</a>
+    <a href="helpzone.html">HelpZone</a>
+  </div>
+  <script>
+    (function(){
+      const btn  = document.getElementById('navHamburger');
+      const menu = document.getElementById('navMobileMenu');
+      if (!btn || !menu) return;
+      btn.addEventListener('click', () => {
+        btn.classList.toggle('open');
+        menu.classList.toggle('open');
+      });
+      document.addEventListener('click', e => {
+        if (!btn.contains(e.target) && !menu.contains(e.target)) {
+          btn.classList.remove('open');
+          menu.classList.remove('open');
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

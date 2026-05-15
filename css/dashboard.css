@@ -314,3 +314,102 @@ body.dark .particle { background: radial-gradient(rgba(255,179,71,0.08), transpa
   opacity: 1;
   color: var(--or);
 }
+/* ── MOBILE HAMBURGER ── */
+.nav-hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+  padding: 4px;
+  background: none;
+  border: none;
+}
+.nav-hamburger span {
+  display: block;
+  width: 22px; height: 2px;
+  background: var(--sa);
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+.nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-hamburger.open span:nth-child(2) { opacity: 0; }
+.nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+.nav-mobile-menu {
+  display: none;
+  position: fixed;
+  top: 58px; left: 0; right: 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--bd);
+  padding: 12px 0;
+  z-index: 999;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  flex-direction: column;
+  animation: menuSlide 0.2s ease;
+}
+@keyframes menuSlide {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.nav-mobile-menu.open { display: flex; }
+.nav-mobile-menu a {
+  padding: 13px 24px;
+  font-family: var(--font-sans);
+  font-size: 14px; font-weight: 400;
+  color: var(--sa); text-decoration: none;
+  border-bottom: 1px solid var(--bd);
+  transition: background 0.2s, color 0.2s;
+}
+.nav-mobile-menu a:last-child { border-bottom: none; }
+.nav-mobile-menu a:hover { background: var(--su); color: var(--or); }
+
+@media (max-width: 700px) {
+  .nav-links { display: none !important; }
+  .nav-hamburger { display: flex; }
+}
+
+@media (max-width: 700px) {
+  body { overflow-y: auto; height: auto; }
+
+  .navbar { padding: 0 20px; }
+
+  .dashboard {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .panel { padding: 20px; overflow: visible; }
+  .panel-right { padding: 0; gap: 12px; }
+
+  .env-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+
+  .aqi-ring-wrap { padding: 12px; }
+  .aqi-ring { width: 110px; height: 110px; }
+  .aqi-number { font-size: 32px; }
+
+  .stats-col { gap: 8px; }
+  .stat-card { padding: 10px 8px; }
+  .stat-val { font-size: 16px; }
+
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: auto;
+    gap: 8px;
+  }
+
+  .feature-card { padding: 16px 12px; gap: 6px; }
+  .fc-icon { font-size: 20px; }
+  .fc-name { font-size: 12px; }
+  .fc-desc { display: none; }
+
+  .risk-status { font-size: clamp(20px, 5vw, 28px); }
+  .greeting { font-size: 16px; }
+  .hero-desc { font-size: 13px; }
+
+  .alerts-row { flex-direction: column; gap: 8px; }
+
+  .nav-center { display: none; }
+}

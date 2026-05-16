@@ -28,7 +28,19 @@
     <div class="nav-right">
       <button class="nav-hamburger" id="navHamburger" aria-label="Menu"><span></span><span></span><span></span></button>
       <button class="theme-toggle" id="themeBtn" title="Toggle theme">☀️</button>
-      <button class="icon-btn" title="Alerts">🔔</button>
+      <div class="alert-bell-wrap" id="alertBellWrap">
+        <button class="icon-btn" id="alertBtn" title="Alerts">🔔</button>
+        <span class="alert-badge" id="alertBadge" style="display:none;">0</span>
+        <div class="alert-dropdown" id="alertDropdown">
+          <div class="alert-dropdown-header">
+            <span class="alert-dropdown-title">Notifications</span>
+            <button class="alert-clear-btn" id="alertClearBtn">Clear all</button>
+          </div>
+          <div class="alert-list" id="alertList">
+            <div class="alert-empty">No alerts right now</div>
+          </div>
+        </div>
+      </div>
       <div class="avatar" id="avatar">?</div>
     </div>
   </nav>

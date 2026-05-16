@@ -282,6 +282,9 @@ navigator.geolocation.getCurrentPosition(async (position) => {
     aqiLabel.textContent   = meta.label;
     riskStatus.textContent = meta.risk;
 
+    // Trigger AQI alert if needed
+    if (window._addAQIAlert) window._addAQIAlert(aqi, meta.label);
+
     if (quizDone) await buildInsight(aqi, meta.label, wData);
 
     animateRing(meta.offset, meta.color);
@@ -299,3 +302,124 @@ navigator.geolocation.getCurrentPosition(async (position) => {
   locationName.textContent = '📍 Location unavailable';
   heroDesc.textContent     = 'Enable location access to see your live air quality data.';
 });
+/* ── ALERT BELL ── */
+(function initAlerts() {
+  const alertBtn      = document.getElementById('alertBtn');
+  const alertDropdown = document.getElementById('alertDropdown');
+  const alertBadge    = document.getElementById('alertBadge');
+  const alertList     = document.getElementById('alertList');
+  const alertClearBtn = document.getElementById('alertClearBtn');
+
+  if (!alertBtn) return;
+
+  const today    = new Date().toISOString().split('T')[0];
+  const alerts   = [];
+
+  // 1. Profile incomplete
+  if (!localStorage.getItem('bs-name')) {
+    alerts.push({
+      ico: '👤', type: 'remind',
+      title: 'Complete your profile',
+      desc: 'Take the health quiz to get personalised insights and accurate scores.'
+    });
+  }
+
+  // 2. Log reminder
+  function getLogs() { try { return JSON.parse(localStorage.getItem('bs-logs') || '[]'); } catch { return []; } }
+  const logs     = getLogs();
+  const todayLog = logs.find(l => l.date === today);
+  if (!todayLog) {
+    alerts.push({
+      ico: '📋', type: 'remind',
+      title: 'Log your symptoms',
+      desc: "You haven't logged your breathing today. Daily logs make your analytics more accurate."
+    });
+  }
+
+  // 3. Streak broken
+  if (logs.length > 0 && !todayLog) {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yKey = yesterday.toISOString().split('T')[0];
+    const hadYesterday = logs.some(l => l.date === yKey);
+    if (hadYesterday) {
+      alerts.push({
+        ico: '🔥', type: 'remind',
+        title: 'Streak at risk',
+        desc: "Log today to keep your streak alive. You logged yesterday — don't break the chain!"
+      });
+    }
+  }
+
+  // 4. Episode recovery (from HelpZone)
+  function getEpisodes() { try { return JSON.parse(localStorage.getItem('bs-episodes') || '[]'); } catch { return []; } }
+  const episodes    = getEpisodes();
+  const todayEp     = episodes.find(e => e.date === today);
+  if (todayEp) {
+    alerts.push({
+      ico: '🫁', type: 'warning',
+      title: 'Episode logged today',
+      desc: `You had a breathing episode (${todayEp.triggers.join(', ')}) today. Rest, stay hydrated, and monitor your symptoms.`
+    });
+  }
+
+  // 5. High AQI — injected after AQI fetch (see below)
+  window._addAQIAlert = function(aqi, label) {
+    if (aqi > 100) {
+      alerts.push({
+        ico: '🌫️', type: 'warning',
+        title: `Poor air quality — AQI ${aqi}`,
+        desc: `Current AQI is ${aqi} (${label}). Limit outdoor exposure, wear a mask if going out.`
+      });
+      renderAlerts();
+    }
+  };
+
+  function renderAlerts() {
+    alertList.innerHTML = '';
+    if (!alerts.length) {
+      alertList.innerHTML = '<div class="alert-empty">No alerts right now ✓</div>';
+      alertBadge.style.display = 'none';
+      return;
+    }
+
+    alertBadge.textContent     = alerts.length;
+    alertBadge.style.display   = 'flex';
+
+    alerts.forEach(a => {
+      const item = document.createElement('div');
+      item.className = 'alert-item';
+      item.innerHTML = `
+        <div class="alert-item-ico">${a.ico}</div>
+        <div class="alert-item-body">
+          <div class="alert-item-title">${a.title}</div>
+          <div class="alert-item-desc">${a.desc}</div>
+        </div>
+        <span class="alert-item-type ${a.type}">${a.type}</span>
+      `;
+      alertList.appendChild(item);
+    });
+  }
+
+  renderAlerts();
+
+  // Toggle dropdown
+  alertBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    alertDropdown.classList.toggle('open');
+  });
+
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (!alertBtn.contains(e.target) && !alertDropdown.contains(e.target)) {
+      alertDropdown.classList.remove('open');
+    }
+  });
+
+  // Clear all
+  alertClearBtn.addEventListener('click', () => {
+    alerts.length = 0;
+    renderAlerts();
+    alertDropdown.classList.remove('open');
+  });
+})();

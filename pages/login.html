@@ -3,11 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BreatheSafe Login</title>
-
-  <!-- theme.js FIRST — applies body.dark before paint, no flicker -->
+  <title>BreatheSafe — Sign In</title>
   <script src="../js/theme.js"></script>
-
   <link rel="stylesheet" href="../css/variables.css">
   <link rel="stylesheet" href="../css/login.css">
 </head>
@@ -22,18 +19,42 @@
   <main class="login-container">
     <div class="login-card">
 
-      <p class="login-label">RESPIRATORY INTELLIGENCE</p>
-
+      <p class="login-label">Respiratory Intelligence</p>
       <h1>Welcome to <span>BreatheSafe</span></h1>
+      <p class="login-description">Your personal air quality and breathing health companion.</p>
 
-      <p class="login-description">
-        Personalized environmental respiratory intelligence
-        powered by AQI analysis, AI insights, and adaptive breathing safety.
-      </p>
+      <!-- Tab toggle -->
+      <div class="login-tabs">
+        <button class="login-tab active" id="tabSignIn">Sign In</button>
+        <button class="login-tab" id="tabSignUp">Sign Up</button>
+      </div>
 
+      <!-- Error message -->
+      <div class="login-error" id="loginError"></div>
+
+      <!-- Email/password form -->
+      <div class="login-form">
+        <div class="login-input-wrap">
+          <input type="email" id="emailInput" class="login-input" placeholder="Email address" />
+        </div>
+        <div class="login-input-wrap">
+          <input type="password" id="passwordInput" class="login-input" placeholder="Password" />
+        </div>
+        <button class="login-submit-btn" id="emailAuthBtn">
+          <span id="emailAuthLabel">Sign In</span>
+          <div class="login-spinner" id="loginSpinner"></div>
+        </button>
+      </div>
+
+      <!-- Divider -->
+      <div class="login-divider">
+        <span>or</span>
+      </div>
+
+      <!-- Google button -->
       <button id="google-login">
         <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google">
-        Continue With Google
+        Continue with Google
       </button>
 
     </div>

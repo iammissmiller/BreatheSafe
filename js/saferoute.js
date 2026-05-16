@@ -1,21 +1,19 @@
-// saferoute.js — v3
-// Real OSRM routing + AQI sampling + color-coded route + Groq insight
+// saferoute.js — v4
+// Google Maps geocoding + OSRM routing + OpenWeather AQI + Groq insights
 
 (function () {
   'use strict';
 
-  const OW_BASE    = '/api/weather';
-  const OW_GEO     = '/api/weather';
-  const OW_REVERSE = '/api/weather';
+  const OW_BASE    = '/api/weather';   // AQI only
+  const MAPS_BASE  = '/api/maps';      // Google Maps geocoding + places
   const OSRM_BASE  = 'https://router.project-osrm.org/route/v1/driving';
   const GROQ_URL   = '/api/groq';
   const GROQ_MODEL = 'llama-3.1-8b-instant';
 
-  // Route waypoint shifts to simulate alternatives
   const ROUTE_VARIANTS = [
-    { name: 'Direct Route',   emoji: '🛣️', shift: [0, 0] },
-    { name: 'Northern Path',  emoji: '🌿', shift: [0.15, 0] },
-    { name: 'Southern Path',  emoji: '💧', shift: [-0.15, 0] },
+    { name: 'Direct Route',  emoji: '🛣️', shift: [0, 0]      },
+    { name: 'Northern Path', emoji: '🌿', shift: [0.15, 0]   },
+    { name: 'Southern Path', emoji: '💧', shift: [-0.15, 0]  },
   ];
 
   const ZONE_OFFSETS = [
@@ -27,19 +25,6 @@
   ];
 
   const ZONE_DIRECTION_LABELS = ['North Zone', 'East Zone', 'South Zone', 'West Zone', 'Central Zone'];
-  async function reverseGeocodeName(lat, lng, fallbackIdx) {
-    try {
-      const url  = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=14&accept-language=en`;
-      const res  = await fetch(url);
-      const data = await res.json();
-      // Try suburb, neighbourhood, village, town in order
-      const addr = data?.address;
-      const name = addr?.suburb || addr?.neighbourhood || addr?.village || addr?.town || addr?.city_district || null;
-      return name || ZONE_DIRECTION_LABELS[fallbackIdx] || `Zone ${fallbackIdx + 1}`;
-    } catch {
-      return ZONE_DIRECTION_LABELS[fallbackIdx] || `Zone ${fallbackIdx + 1}`;
-    }
-  }
 
   // ── DOM ──
   const originInput = document.getElementById('sr-origin');
@@ -62,13 +47,12 @@
   (document.body.classList.contains('dark') ? darkTile : lightTile).addTo(map);
   L.control.zoom({ position: 'topright' }).addTo(map);
 
-  // Fix map not rendering on mobile — invalidate size after layout settles
   setTimeout(() => map.invalidateSize(), 300);
   window.addEventListener('resize', () => map.invalidateSize());
 
-  let markerLayer    = L.layerGroup().addTo(map);
-  let routeLayer     = L.layerGroup().addTo(map);
-  let userCoords     = null;
+  let markerLayer = L.layerGroup().addTo(map);
+  let routeLayer  = L.layerGroup().addTo(map);
+  let userCoords  = null;
 
   // ── HELPERS ──
   function aqiCategory(raw) {
@@ -77,10 +61,10 @@
   }
 
   function aqiInfo(val) {
-    if (val <= 50)  return { label: 'Good',     color: '#27ae60', cls: 'good'     };
-    if (val <= 100) return { label: 'Moderate', color: '#f39c12', cls: 'moderate' };
-    if (val <= 150) return { label: 'Poor',     color: '#e74c3c', cls: 'poor'     };
-    return              { label: 'Very Poor', color: '#8e44ad', cls: 'poor'     };
+    if (val <= 50)  return { label: 'Good',      color: '#27ae60', cls: 'good'     };
+    if (val <= 100) return { label: 'Moderate',  color: '#f39c12', cls: 'moderate' };
+    if (val <= 150) return { label: 'Poor',      color: '#e74c3c', cls: 'poor'     };
+    return              { label: 'Very Poor',  color: '#8e44ad', cls: 'poor'     };
   }
 
   function showError(msg) {
@@ -94,8 +78,6 @@
     goBtn.disabled = on;
   }
 
-
-
   function formatDistance(meters) {
     return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.round(meters)} m`;
   }
@@ -103,23 +85,78 @@
   function formatDuration(seconds) {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m} min`;
+    return h > 0 ? `${h}h ${m}m` : `${m} min`;
   }
 
-  // ── GEOCODE ──
+  // ── GOOGLE MAPS GEOCODING ──
   async function geocode(query) {
-    const url  = `${OW_GEO}?type=geo&q=${encodeURIComponent(query)}&limit=1`;
+    const res  = await fetch(`${MAPS_BASE}?type=geocode&q=${encodeURIComponent(query)}`);
+    const data = await res.json();
+    if (!data.results || !data.results.length)
+      throw new Error(`Could not find "${query}". Try a more specific name.`);
+    const r = data.results[0];
+    return {
+      lat:  r.geometry.location.lat,
+      lng:  r.geometry.location.lng,
+      name: r.address_components[0]?.long_name || r.formatted_address.split(',')[0],
+    };
+  }
+
+  // ── GOOGLE MAPS PLACES AUTOCOMPLETE ──
+  async function fetchSuggestions(query, userLat, userLng) {
+    if (query.length < 2) return [];
+    let url = `${MAPS_BASE}?type=autocomplete&q=${encodeURIComponent(query)}`;
+    if (userLat && userLng) url += `&lat=${userLat}&lng=${userLng}&radius=50000`;
     const res  = await fetch(url);
     const data = await res.json();
-    if (!data.length) throw new Error(`Could not find "${query}". Try "City, State" e.g. "Indore, MP".`);
-    return { lat: data[0].lat, lng: data[0].lon, name: data[0].name };
+    if (!data.predictions) return [];
+    return data.predictions.map(p => ({
+      name:     p.structured_formatting?.main_text || p.description.split(',')[0],
+      subtext:  p.structured_formatting?.secondary_text || '',
+      place_id: p.place_id,
+    }));
+  }
+
+  async function getPlaceCoords(place_id) {
+    const res  = await fetch(`${MAPS_BASE}?type=details&q=${place_id}`);
+    const data = await res.json();
+    if (!data.result) return null;
+    return {
+      lat:  data.result.geometry.location.lat,
+      lng:  data.result.geometry.location.lng,
+      name: data.result.name,
+    };
+  }
+
+  async function reverseGeocode(lat, lng) {
+    try {
+      const res  = await fetch(`${MAPS_BASE}?type=reverse&lat=${lat}&lng=${lng}`);
+      const data = await res.json();
+      const comp = data?.results?.[0]?.address_components;
+      return comp?.find(c => c.types.includes('locality'))?.long_name
+          || comp?.find(c => c.types.includes('administrative_area_level_2'))?.long_name
+          || 'Current Location';
+    } catch { return 'Current Location'; }
+  }
+
+  // ── ZONE LABEL (Google Maps reverse geocode at suburb level) ──
+  async function getZoneLabel(lat, lng, fallbackIdx) {
+    try {
+      const res  = await fetch(`${MAPS_BASE}?type=reverse&lat=${lat}&lng=${lng}`);
+      const data = await res.json();
+      const comp = data?.results?.[0]?.address_components;
+      return comp?.find(c => c.types.includes('sublocality_level_1'))?.long_name
+          || comp?.find(c => c.types.includes('sublocality'))?.long_name
+          || comp?.find(c => c.types.includes('neighborhood'))?.long_name
+          || comp?.find(c => c.types.includes('locality'))?.long_name
+          || ZONE_DIRECTION_LABELS[fallbackIdx]
+          || `Zone ${fallbackIdx + 1}`;
+    } catch { return ZONE_DIRECTION_LABELS[fallbackIdx] || `Zone ${fallbackIdx + 1}`; }
   }
 
   // ── FETCH AQI ──
   async function fetchAQI(lat, lng) {
-    const url  = `${OW_BASE}?type=aqi&lat=${lat}&lon=${lng}`;
-    const res  = await fetch(url);
+    const res  = await fetch(`${OW_BASE}?type=aqi&lat=${lat}&lon=${lng}`);
     const data = await res.json();
     return aqiCategory(data?.list?.[0]?.main?.aqi ?? 2);
   }
@@ -128,10 +165,9 @@
   async function fetchRoute(origin, dest, waypointShift) {
     let url;
     if (waypointShift[0] !== 0 || waypointShift[1] !== 0) {
-      // Scale shift proportionally to route distance (deg between points)
       const latDiff = Math.abs(dest.lat - origin.lat);
       const lngDiff = Math.abs(dest.lng - origin.lng);
-      const scale   = Math.max(latDiff, lngDiff) * 0.3; // 30% of route span
+      const scale   = Math.max(latDiff, lngDiff) * 0.3;
       const midLat  = (origin.lat + dest.lat) / 2 + waypointShift[0] * scale;
       const midLng  = (origin.lng + dest.lng) / 2 + waypointShift[1] * scale;
       url = `${OSRM_BASE}/${origin.lng},${origin.lat};${midLng},${midLat};${dest.lng},${dest.lat}?overview=full&geometries=geojson&steps=false`;
@@ -140,7 +176,8 @@
     }
     const res  = await fetch(url);
     const data = await res.json();
-    if (data.code !== 'Ok' || !data.routes.length) throw new Error('Could not find a route between these locations.');
+    if (data.code !== 'Ok' || !data.routes.length)
+      throw new Error('Could not find a route between these locations.');
     const route = data.routes[0];
     return {
       coords:   route.geometry.coordinates.map(c => [c[1], c[0]]),
@@ -149,9 +186,8 @@
     };
   }
 
-  // ── SAMPLE AQI ALONG ROUTE ──
+  // ── AQI ALONG ROUTE ──
   async function sampleAQIAlongRoute(coords) {
-    // Pick ~6 evenly spaced points along the route
     const count  = Math.min(6, coords.length);
     const step   = Math.floor(coords.length / count);
     const points = [];
@@ -159,15 +195,11 @@
       const idx = Math.min(i * step, coords.length - 1);
       points.push(coords[idx]);
     }
-
-    const aqis = await Promise.all(
-      points.map(pt => fetchAQI(pt[0], pt[1]))
-    );
-
+    const aqis = await Promise.all(points.map(pt => fetchAQI(pt[0], pt[1])));
     return points.map((pt, i) => ({ lat: pt[0], lng: pt[1], aqi: aqis[i] }));
   }
 
-  // ── COLOR-CODED ROUTE ──
+  // ── DRAW ROUTES ──
   function drawColoredRoute(coords, aqiPoints, isActive) {
     if (aqiPoints.length < 2) {
       const info = aqiInfo(aqiPoints[0]?.aqi || 65);
@@ -177,7 +209,6 @@
       }).addTo(routeLayer);
       return;
     }
-
     const segmentSize = Math.floor(coords.length / aqiPoints.length);
     aqiPoints.forEach((pt, i) => {
       const start = i * segmentSize;
@@ -205,7 +236,7 @@
     return '';
   }
 
-  // ── RENDER ROUTE CARDS ──
+  // ── ROUTE CARDS ──
   function renderRouteCards(routes, activeIndex, safestIdx, onSelect) {
     const existing = document.getElementById('sr-route-cards');
     if (existing) existing.remove();
@@ -234,12 +265,11 @@
       wrap.appendChild(card);
     });
 
-    // Insert before the warning
     const warning = document.getElementById('sr-warning');
     warning.parentElement.insertBefore(wrap, warning);
   }
 
-  // ── RENDER ZONE LIST ──
+  // ── ZONE LIST ──
   function renderZoneList(zones) {
     const list = document.getElementById('sr-zone-list');
     list.innerHTML = '';
@@ -261,7 +291,7 @@
     });
   }
 
-  // ── GROQ — All 3 sections ──
+  // ── GROQ INSIGHT ──
   async function fetchGroqInsight(originName, destName, distance, duration, avgAqi, aqiPoints) {
     const profile = {
       name:        localStorage.getItem('bs-name') || 'there',
@@ -273,8 +303,8 @@
     const aqiWorst = Math.max(...aqiPoints.map(p => p.aqi));
     const aqiBest  = Math.min(...aqiPoints.map(p => p.aqi));
     const aqiLabel = aqiWorst <= 50 ? 'Good' : aqiWorst <= 100 ? 'Moderate' : aqiWorst <= 150 ? 'Poor' : 'Very Poor';
+    const now      = new Date().getHours();
 
-    const now  = new Date().getHours();
     const prompt = `You are a health and air quality AI in BreatheSafe. Respond ONLY with valid JSON, no markdown, no backticks.
 
 User: name=${profile.name}, conditions=${profile.conditions}, sensitivity=${profile.sensitivity}, smoker=${profile.smoke}.
@@ -282,13 +312,13 @@ Route: ${originName} to ${destName}, ${formatDistance(distance)}, ~${formatDurat
 AQI: avg=${avgAqi}, worst=${aqiWorst} (${aqiLabel}), best=${aqiBest}. Current hour: ${now}:00.
 
 Rules:
-- insight: 3-4 sentences. Write for ANY person travelling this route, not just patients. Mention the AQI number and what it means for a normal person (e.g. eye irritation, fatigue, breathing discomfort). Mention if the route is safe or risky. Be warm and informative, not clinical.
-- warning: If AQI>100 OR user has asthma/COPD/allergies, write 2-3 sentences with SPECIFIC actions — mention exact items (N95 mask, rescue inhaler, antihistamine, windows closed, AC on recirculate). Tailor to their conditions. If AQI<=100 and no conditions, return null.
-- best_time: ONE sentence with EXACT time window like "6:00 AM – 8:00 AM" or "8:00 PM – 10:00 PM". Base on AQI — poor AQI means strict window, good AQI means any time. Always include the actual times in numbers.
+- insight: 3-4 sentences. Write for ANY person. Mention AQI number and what it means (eye irritation, fatigue, breathing discomfort). Say if route is safe or risky.
+- warning: If AQI>100 OR user has asthma/COPD/allergies, write 2-3 sentences with SPECIFIC actions (N95 mask, rescue inhaler, antihistamine, windows closed, AC on recirculate). If AQI<=100 and no conditions, return null.
+- best_time: ONE sentence with EXACT time window like "6:00 AM – 8:00 AM". Always include actual times.
 
 {"insight":"...","warning":"...or null","best_time":"..."}`;
 
-    const res = await fetch(GROQ_URL, {
+    const res  = await fetch(GROQ_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: GROQ_MODEL, max_tokens: 400, messages: [{ role: 'user', content: prompt }] }),
@@ -298,11 +328,10 @@ Rules:
     try {
       return JSON.parse(text);
     } catch {
-      // Fallback if JSON parse fails
       return {
         insight:   text || 'Check the map for air quality conditions along your route.',
         warning:   avgAqi > 100 ? 'Air quality is poor — consider wearing a mask.' : null,
-        best_time: avgAqi <= 50 ? 'Any time is suitable for this route.' : 'Early morning travel is recommended for cleaner air.',
+        best_time: avgAqi <= 50 ? 'Any time is suitable for this route.' : 'Early morning (6:00 AM – 8:00 AM) is recommended for cleaner air.',
       };
     }
   }
@@ -320,11 +349,10 @@ Rules:
     resultsBox.classList.remove('visible');
     idleBox.style.display = 'none';
 
-    // Reset insight
     document.getElementById('sr-insight-text').textContent = 'Generating personalised advice…';
     document.getElementById('sr-insight-spinner').classList.add('active');
-    document.getElementById('sr-warning').classList.add('hidden');
-    document.getElementById('sr-best-time').classList.remove('visible');
+    document.getElementById('sr-warning').style.display = 'none';
+    document.getElementById('sr-best-time').style.display = 'none';
 
     try {
       // 1. Geocode
@@ -338,16 +366,14 @@ Rules:
       }
       let dest = destInput._coords || await geocode(destQ);
 
-      // 2. Fetch all 3 routes in parallel
+      // 2. Fetch routes
       const routeResults = await Promise.all(
         ROUTE_VARIANTS.map(v => fetchRoute(origin, dest, v.shift).catch(() => null))
       );
-
-      // Filter out failed routes
       const validRoutes = routeResults.map((r, i) => r ? { ...ROUTE_VARIANTS[i], ...r } : null).filter(Boolean);
       if (!validRoutes.length) throw new Error('Could not find any routes between these locations.');
 
-      // 3. Sample AQI along each route
+      // 3. Sample AQI
       const routesWithAQI = await Promise.all(
         validRoutes.map(async r => {
           const aqiPoints = await sampleAQIAlongRoute(r.coords);
@@ -356,7 +382,7 @@ Rules:
         })
       );
 
-      // 4. Deduplicate routes that are too similar (same distance within 5%)
+      // 4. Deduplicate
       const uniqueRoutes = routesWithAQI.filter((r, i) => {
         if (i === 0) return true;
         return !routesWithAQI.slice(0, i).some(prev =>
@@ -365,37 +391,31 @@ Rules:
       });
       const finalRoutes = uniqueRoutes.length >= 1 ? uniqueRoutes : routesWithAQI;
 
-      // 5. Find safest (lowest AQI, tiebreak by fastest)
+      // 5. Find safest
       const minAqi    = Math.min(...finalRoutes.map(r => r.avgAqi));
       const safestIdx = finalRoutes.indexOf(
-        finalRoutes
-          .filter(r => r.avgAqi === minAqi)
-          .reduce((a, b) => a.duration <= b.duration ? a : b)
+        finalRoutes.filter(r => r.avgAqi === minAqi).reduce((a, b) => a.duration <= b.duration ? a : b)
       );
       let activeIndex = safestIdx;
 
-      // 6a. Fit map to safest route
       map.fitBounds(finalRoutes[safestIdx].coords, { padding: [50, 50] });
 
-      // 6. Sample safe zones with real names
-      const allZones = await Promise.all(ZONE_OFFSETS.map(async z => {
-        const lat   = origin.lat + z.dlat;
-        const lng   = origin.lng + z.dlng;
-        const [aqi, label] = await Promise.all([fetchAQI(lat, lng), reverseGeocodeName(lat, lng, ZONE_OFFSETS.indexOf(z))]);
+      // 6. Safe zones with Google Maps labels
+      const allZones = await Promise.all(ZONE_OFFSETS.map(async (z, idx) => {
+        const lat = origin.lat + z.dlat;
+        const lng = origin.lng + z.dlng;
+        const [aqi, label] = await Promise.all([fetchAQI(lat, lng), getZoneLabel(lat, lng, idx)]);
         return { label, lat, lng, aqi };
       }));
       const cleanZones = allZones.filter(z => z.aqi <= 100).sort((a, b) => a.aqi - b.aqi);
 
-      // 7. Draw function
+      // 7. Draw
       function drawAllRoutes(activeIdx) {
         routeLayer.clearLayers();
         markerLayer.clearLayers();
 
-        finalRoutes.forEach((r, i) => {
-          drawColoredRoute(r.coords, r.aqiPoints, i === activeIdx);
-        });
+        finalRoutes.forEach((r, i) => drawColoredRoute(r.coords, r.aqiPoints, i === activeIdx));
 
-        // AQI dots on active route
         finalRoutes[activeIdx].aqiPoints.forEach(pt => {
           const info = aqiInfo(pt.aqi);
           L.circleMarker([pt.lat, pt.lng], {
@@ -404,7 +424,6 @@ Rules:
           }).bindPopup(`AQI ${pt.aqi} — ${info.label}`).addTo(markerLayer);
         });
 
-        // Origin / dest markers
         L.marker([origin.lat, origin.lng], {
           icon: L.divIcon({
             className: '',
@@ -424,17 +443,26 @@ Rules:
 
       drawAllRoutes(activeIndex);
 
-      // 8. Route cards with select handler
+      // 8. Route select handler
       function onRouteSelect(i) {
         activeIndex = i;
         drawAllRoutes(i);
         updateSummary(finalRoutes[i]);
         renderRouteCards(finalRoutes, i, safestIdx, onRouteSelect);
+
+        // Update insight for selected route
+        const sel = finalRoutes[i];
+        document.getElementById('sr-insight-text').textContent = 'Generating advice for this route…';
+        document.getElementById('sr-insight-spinner').classList.add('active');
+        fetchGroqInsight(origin.name, dest.name, sel.distance, sel.duration, sel.avgAqi, sel.aqiPoints)
+          .then(result => updateInsight(result))
+          .catch(() => {})
+          .finally(() => document.getElementById('sr-insight-spinner').classList.remove('active'));
       }
 
       renderRouteCards(finalRoutes, activeIndex, safestIdx, onRouteSelect);
 
-      // 9. Update summary for active route
+      // 9. Summary
       function updateSummary(r) {
         const aqiGrade = aqiInfo(r.avgAqi);
         document.getElementById('sr-distance').textContent  = formatDistance(r.distance);
@@ -444,42 +472,32 @@ Rules:
         document.getElementById('sr-aqi-grade').style.color = aqiGrade.color;
       }
 
+      function updateInsight(result) {
+        document.getElementById('sr-insight-text').textContent = result.insight || 'Check the map for air quality along your route.';
+        const warningEl   = document.getElementById('sr-warning');
+        const warningText = document.getElementById('sr-warning-text');
+        if (result.warning && result.warning !== 'null') {
+          warningText.textContent = result.warning;
+          warningEl.style.display = 'flex';
+        } else {
+          warningEl.style.display = 'none';
+        }
+        if (result.best_time) {
+          document.getElementById('sr-best-time-val').textContent = result.best_time;
+          document.getElementById('sr-best-time').style.display = 'block';
+        }
+      }
+
       updateSummary(finalRoutes[activeIndex]);
-
-      // 11. AQI strip for active route
-
-      // 12. Zone list
       renderZoneList(cleanZones);
-
-      // 13. Show results
       resultsBox.classList.add('visible');
 
-      // 14. Groq insight for safest route — populates all 3 sections
+      // 10. Groq insight
       const safest = finalRoutes[safestIdx];
       fetchGroqInsight(origin.name, dest.name, safest.distance, safest.duration, safest.avgAqi, safest.aqiPoints)
-        .then(result => {
-          document.getElementById('sr-insight-text').textContent = result.insight || 'Check the map for air quality along your route.';
-
-          const warningEl   = document.getElementById('sr-warning');
-          const warningText = document.getElementById('sr-warning-text');
-          if (result.warning && result.warning !== 'null') {
-            warningText.textContent = result.warning;
-            warningEl.style.display = 'flex';
-          } else {
-            warningEl.style.display = 'none';
-          }
-
-          if (result.best_time) {
-            document.getElementById('sr-best-time-val').textContent = result.best_time;
-            document.getElementById('sr-best-time').style.display = 'block';
-          }
-        })
-        .catch(() => {
-          document.getElementById('sr-insight-text').textContent = 'Check the map for air quality along your route.';
-        })
-        .finally(() => {
-          document.getElementById('sr-insight-spinner').classList.remove('active');
-        });
+        .then(result => updateInsight(result))
+        .catch(() => { document.getElementById('sr-insight-text').textContent = 'Check the map for air quality along your route.'; })
+        .finally(() => document.getElementById('sr-insight-spinner').classList.remove('active'));
 
     } catch (err) {
       showError(err.message || 'Something went wrong. Please try again.');
@@ -489,7 +507,7 @@ Rules:
     }
   }
 
-  // ── AUTOCOMPLETE (OpenWeather) ──
+  // ── AUTOCOMPLETE ──
   function setupAutocomplete(input) {
     const dropdown = document.createElement('div');
     dropdown.className = 'sr-suggestions';
@@ -503,21 +521,19 @@ Rules:
       if (q.length < 2) { dropdown.classList.remove('open'); return; }
       timer = setTimeout(async () => {
         try {
-          const url  = `${OW_GEO}?type=geo&q=${encodeURIComponent(q)}&limit=5`;
-          const res  = await fetch(url);
-          const data = await res.json();
+          const suggestions = await fetchSuggestions(q, userCoords?.lat, userCoords?.lng);
           dropdown.innerHTML = '';
-          if (!data.length) { dropdown.classList.remove('open'); return; }
-          data.forEach(r => {
+          if (!suggestions.length) { dropdown.classList.remove('open'); return; }
+          suggestions.forEach(r => {
             const item = document.createElement('div');
             item.className = 'sr-suggestion-item';
-            const sub = [r.state, r.country].filter(Boolean).join(', ');
-            item.innerHTML = `${r.name}<span>${sub}</span>`;
-            item.addEventListener('mousedown', e => {
+            item.innerHTML = `${r.name}<span>${r.subtext}</span>`;
+            item.addEventListener('mousedown', async e => {
               e.preventDefault();
               input.value = r.name;
-              input._coords = { lat: r.lat, lng: r.lon, name: r.name };
               dropdown.classList.remove('open');
+              const coords = await getPlaceCoords(r.place_id);
+              if (coords) input._coords = coords;
             });
             dropdown.appendChild(item);
           });
@@ -526,7 +542,7 @@ Rules:
       }, 300);
     });
 
-    input.addEventListener('blur', () => setTimeout(() => dropdown.classList.remove('open'), 150));
+    input.addEventListener('blur',  () => setTimeout(() => dropdown.classList.remove('open'), 150));
     input.addEventListener('focus', () => { if (dropdown.children.length) dropdown.classList.add('open'); });
     input.addEventListener('keydown', e => {
       if (e.key === 'Escape') dropdown.classList.remove('open');
@@ -540,7 +556,6 @@ Rules:
   // ── EVENTS ──
   goBtn.addEventListener('click', findRoute);
 
-  // Dark mode tile switch
   document.addEventListener('bs-theme-change', () => {
     const dark  = document.body.classList.contains('dark');
     const mapEl = document.getElementById('saferoute-map');
@@ -552,39 +567,26 @@ Rules:
     }, 300);
   });
 
-  // Geolocation
+  // ── GEOLOCATION ──
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(async pos => {
       const { latitude: lat, longitude: lng } = pos.coords;
       userCoords = { lat, lng };
       map.setView([lat, lng], 10);
 
-      // Current location marker — pulsing dot
-      const locIcon = L.divIcon({
-        className: '',
-        html: `<div style="
-          width:16px;height:16px;border-radius:50%;
-          background:#4285f4;border:3px solid #fff;
-          box-shadow:0 0 0 4px rgba(66,133,244,0.3),0 2px 8px rgba(0,0,0,0.3);
-          animation:pulse-loc 2s ease-in-out infinite;
-        "></div>
-        <style>@keyframes pulse-loc{0%,100%{box-shadow:0 0 0 4px rgba(66,133,244,0.3)}50%{box-shadow:0 0 0 8px rgba(66,133,244,0.1)}}</style>`,
-        iconSize: [16, 16], iconAnchor: [8, 8],
-      });
-      L.marker([lat, lng], { icon: locIcon, zIndexOffset: 1000 })
-        .bindPopup('<b>📍 Your Location</b>')
-        .addTo(map);
+      // Pulsing blue location dot
+      L.marker([lat, lng], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="width:16px;height:16px;border-radius:50%;background:#4285f4;border:3px solid #fff;box-shadow:0 0 0 4px rgba(66,133,244,0.3),0 2px 8px rgba(0,0,0,0.3);animation:pulse-loc 2s ease-in-out infinite;"></div><style>@keyframes pulse-loc{0%,100%{box-shadow:0 0 0 4px rgba(66,133,244,0.3)}50%{box-shadow:0 0 0 8px rgba(66,133,244,0.1)}}</style>`,
+          iconSize: [16, 16], iconAnchor: [8, 8],
+        }),
+        zIndexOffset: 1000,
+      }).bindPopup('<b>📍 Your Location</b>').addTo(map);
 
-      try {
-        const url  = `${OW_REVERSE}?type=reverse&lat=${lat}&lon=${lng}`;
-        const res  = await fetch(url);
-        const data = await res.json();
-        const city = data?.[0]?.name || 'Current Location';
-        originInput.value = city;
-        originInput._coords = { lat, lng, name: city };
-      } catch {
-        originInput.value = 'Current Location';
-      }
+      const city = await reverseGeocode(lat, lng);
+      originInput.value   = city;
+      originInput._coords = { lat, lng, name: city };
     }, () => {});
   }
 

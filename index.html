@@ -404,14 +404,14 @@ resizeWave(); drawWave();
 // ══════════════════════════════════
 // LIVE AQI
 // ══════════════════════════════════
-const API_KEY = 'cdd2976e725237deb098721dbe53d8aa';
+
 
 navigator.geolocation?.getCurrentPosition(async pos => {
   const { latitude: lat, longitude: lon } = pos.coords;
   try {
     const [wRes, aqRes] = await Promise.all([
-      fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`),
-      fetch(`https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}`)
+      fetch(`/api/weather?type=weather&lat=${lat}&lon=${lon}`),
+      fetch(`/api/weather?type=aqi&lat=${lat}&lon=${lon}`)
     ]);
     const w  = await wRes.json();
     const aq = await aqRes.json();

@@ -6,7 +6,7 @@ import { saveEpisode as saveEpisodeFirestore } from './db.js';
 (function () {
   'use strict';
 
-  const GROQ_URL   = 'https://api.groq.com/openai/v1/chat/completions';
+  const GROQ_URL   = '/api/groq';
   const GROQ_MODEL = 'llama-3.1-8b-instant';
 
   // ── FALLBACK steps if Groq fails ─────────────────────────
@@ -169,7 +169,6 @@ Rules:
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GROQ_KEY}`,
       },
       body: JSON.stringify({
         model: GROQ_MODEL,

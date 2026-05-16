@@ -141,11 +141,10 @@ Write the insight now. 2-3 sentences only. No bullet points. No markdown.`;
   try {
     aiInsight.textContent = 'Generating insight...';
 
-    const res  = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res  = await fetch('/api/groq', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GROQ_KEY}`
       },
       body: JSON.stringify({
         model: 'llama-3.1-8b-instant',
@@ -259,7 +258,7 @@ navigator.geolocation.getCurrentPosition(async (position) => {
   const lon = position.coords.longitude;
 
   try {
-    const wRes  = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`);
+    const wRes  = await fetch(`/api/weather?type=weather&lat=${lat}&lon=${lon}`);
     const wData = await wRes.json();
 
     locationName.classList.remove('locating');
@@ -268,11 +267,11 @@ navigator.geolocation.getCurrentPosition(async (position) => {
     humidityValue.textContent = `${wData.main.humidity}%`;
     windValue.textContent     = `${Math.round(wData.wind.speed)} km/h`;
 
-    const uvRes  = await fetch(`https://api.openweathermap.org/data/2.5/uvi?lat=${lat}&lon=${lon}&appid=${API_KEY}`);
+    const uvRes  = await fetch(`/api/weather?type=uvi&lat=${lat}&lon=${lon}`);
     const uvData = await uvRes.json();
     uvValue.textContent = uvData.value !== undefined ? uvData.value.toFixed(1) : '—';
 
-    const aRes  = await fetch(`https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}`);
+    const aRes  = await fetch(`/api/weather?type=aqi&lat=${lat}&lon=${lon}`);
     const aData = await aRes.json();
     const aqi   = aData.list[0].main.aqi;
     const meta  = aqiMeta(aqi);

@@ -4,11 +4,11 @@
 (function () {
   'use strict';
 
-  const OW_BASE    = 'https://api.openweathermap.org/data/2.5/air_pollution';
-  const OW_GEO     = 'https://api.openweathermap.org/geo/1.0/direct';
-  const OW_REVERSE = 'https://api.openweathermap.org/geo/1.0/reverse';
+  const OW_BASE    = '/api/weather';
+  const OW_GEO     = '/api/weather';
+  const OW_REVERSE = '/api/weather';
   const OSRM_BASE  = 'https://router.project-osrm.org/route/v1/driving';
-  const GROQ_URL   = 'https://api.groq.com/openai/v1/chat/completions';
+  const GROQ_URL   = '/api/groq';
   const GROQ_MODEL = 'llama-3.1-8b-instant';
 
   // Route waypoint shifts to simulate alternatives
@@ -109,7 +109,7 @@
 
   // ── GEOCODE ──
   async function geocode(query) {
-    const url  = `${OW_GEO}?q=${encodeURIComponent(query)}&limit=1&appid=${API_KEY}`;
+    const url  = `${OW_GEO}?type=geo&q=${encodeURIComponent(query)}&limit=1`;
     const res  = await fetch(url);
     const data = await res.json();
     if (!data.length) throw new Error(`Could not find "${query}". Try "City, State" e.g. "Indore, MP".`);
@@ -118,7 +118,7 @@
 
   // ── FETCH AQI ──
   async function fetchAQI(lat, lng) {
-    const url  = `${OW_BASE}?lat=${lat}&lon=${lng}&appid=${API_KEY}`;
+    const url  = `${OW_BASE}?type=aqi&lat=${lat}&lon=${lng}`;
     const res  = await fetch(url);
     const data = await res.json();
     return aqiCategory(data?.list?.[0]?.main?.aqi ?? 2);
@@ -290,7 +290,7 @@ Rules:
 
     const res = await fetch(GROQ_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: GROQ_MODEL, max_tokens: 400, messages: [{ role: 'user', content: prompt }] }),
     });
     const data = await res.json();
@@ -503,7 +503,7 @@ Rules:
       if (q.length < 2) { dropdown.classList.remove('open'); return; }
       timer = setTimeout(async () => {
         try {
-          const url  = `${OW_GEO}?q=${encodeURIComponent(q)}&limit=5&appid=${API_KEY}`;
+          const url  = `${OW_GEO}?type=geo&q=${encodeURIComponent(q)}&limit=5`;
           const res  = await fetch(url);
           const data = await res.json();
           dropdown.innerHTML = '';
@@ -576,7 +576,7 @@ Rules:
         .addTo(map);
 
       try {
-        const url  = `${OW_REVERSE}?lat=${lat}&lon=${lng}&limit=1&appid=${API_KEY}`;
+        const url  = `${OW_REVERSE}?type=reverse&lat=${lat}&lon=${lng}`;
         const res  = await fetch(url);
         const data = await res.json();
         const city = data?.[0]?.name || 'Current Location';

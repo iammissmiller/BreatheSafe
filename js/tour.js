@@ -66,7 +66,6 @@ style.textContent = `
   .tour-card-el {
     position: fixed;
     width: 340px;
-    max-width: calc(100vw - 32px);
     max-width: calc(100vw - 40px);
     padding: 22px 26px;
     border-radius: 20px;
@@ -81,6 +80,26 @@ style.textContent = `
     pointer-events: all;
   }
   .tour-card-el.visible { opacity: 1; }
+
+  /* Mobile: full width bottom sheet */
+  @media (max-width: 700px) {
+    .tour-card-el {
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      top: auto !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      border-radius: 20px 20px 0 0;
+      padding: 24px 20px 32px;
+      transform: translateY(100%);
+      transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.22,1,0.36,1);
+    }
+    .tour-card-el.visible {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
   .tour-eyebrow {
     font-family: var(--font-sans);
     font-size: 10px; font-weight: 500;

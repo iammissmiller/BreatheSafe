@@ -159,11 +159,19 @@ let prevEl  = null;
 
 /* ── SMART POSITION NEAR ELEMENT ── */
 function positionCard(el, side) {
+  const vw  = window.innerWidth;
+
+  // On mobile, CSS handles it as bottom sheet — don't set inline styles
+  if (vw <= 700) {
+    card.style.top  = '';
+    card.style.left = '';
+    return;
+  }
+
   const r   = el.getBoundingClientRect();
   const cw  = 340;
   const ch  = 220;
   const pad = 16;
-  const vw  = window.innerWidth;
   const vh  = window.innerHeight;
   let top, left;
 

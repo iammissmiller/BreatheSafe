@@ -52,15 +52,19 @@
   // ── MAP ──
   const map = L.map('saferoute-map', { zoomControl: false }).setView([20.5937, 78.9629], 5);
 
-  const lightTile = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
-    attribution: '© Stadia Maps © OpenStreetMap', maxZoom: 20
+  const lightTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO', maxZoom: 19
   });
-  const darkTile = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
-    attribution: '© Stadia Maps © OpenStreetMap', maxZoom: 20
+  const darkTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO', maxZoom: 19
   });
 
   (document.body.classList.contains('dark') ? darkTile : lightTile).addTo(map);
   L.control.zoom({ position: 'topright' }).addTo(map);
+
+  // Fix map not rendering on mobile — invalidate size after layout settles
+  setTimeout(() => map.invalidateSize(), 300);
+  window.addEventListener('resize', () => map.invalidateSize());
 
   let markerLayer    = L.layerGroup().addTo(map);
   let routeLayer     = L.layerGroup().addTo(map);

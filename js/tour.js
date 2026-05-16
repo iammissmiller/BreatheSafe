@@ -66,6 +66,7 @@ style.textContent = `
   .tour-card-el {
     position: fixed;
     width: 340px;
+    max-width: calc(100vw - 32px);
     max-width: calc(100vw - 40px);
     padding: 22px 26px;
     border-radius: 20px;

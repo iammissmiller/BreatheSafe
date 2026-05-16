@@ -423,3 +423,55 @@ navigator.geolocation.getCurrentPosition(async (position) => {
     alertDropdown.classList.remove('open');
   });
 })();
+
+/* ── AVATAR DROPDOWN ── */
+(function initAvatarDropdown() {
+  const wrap     = document.getElementById('avatarWrap');
+  const dropdown = document.getElementById('avatarDropdown');
+  const avatarBig = document.getElementById('avatarBig');
+  const avatarName = document.getElementById('avatarName');
+  const avatarDetail = document.getElementById('avatarDetail');
+  const editBtn  = document.getElementById('avatarEditBtn');
+  const logoutBtn = document.getElementById('avatarLogoutBtn');
+
+  if (!wrap) return;
+
+  // Populate profile info
+  const name       = localStorage.getItem('bs-name') || 'User';
+  const conditions = localStorage.getItem('bs-conditions') || 'No conditions';
+  const age        = localStorage.getItem('bs-age') || '';
+  const sensitivity = localStorage.getItem('bs-sensitivity') || '';
+
+  avatarBig.textContent    = name.charAt(0).toUpperCase();
+  avatarName.textContent   = name;
+  avatarDetail.textContent = [conditions, age, sensitivity ? `Sensitivity ${sensitivity}/10` : '']
+    .filter(Boolean).join(' · ');
+
+  // Toggle dropdown
+  wrap.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdown.classList.toggle('open');
+  });
+
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (!wrap.contains(e.target)) dropdown.classList.remove('open');
+  });
+
+  // Edit profile — go to quiz
+  editBtn.addEventListener('click', () => {
+    window.location.href = 'quiz.html';
+  });
+
+  // Sign out — clear localStorage and redirect to login
+  logoutBtn.addEventListener('click', async () => {
+    try {
+      // Try Firebase signout if available
+      const { auth } = await import('../js/firebase.js');
+      const { signOut } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
+      await signOut(auth);
+    } catch {}
+    localStorage.clear();
+    window.location.href = 'login.html';
+  });
+})();

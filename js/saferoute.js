@@ -4,8 +4,7 @@
 (function () {
   'use strict';
 
-  const OW_BASE    = '/api/weather';   // AQI only
-  const MAPS_BASE  = '/api/maps';      // Google Maps geocoding + places
+  const OW_BASE    = '/api/weather';   // AQI + geocoding
   const OSRM_BASE  = 'https://router.project-osrm.org/route/v1/driving';
   const GROQ_URL   = '/api/groq';
   const GROQ_MODEL = 'llama-3.1-8b-instant';
@@ -88,69 +87,40 @@
     return h > 0 ? `${h}h ${m}m` : `${m} min`;
   }
 
-  // ── GOOGLE MAPS GEOCODING ──
+  // ── GEOCODING (OpenWeather) ──
   async function geocode(query) {
-    const res  = await fetch(`${MAPS_BASE}?type=geocode&q=${encodeURIComponent(query)}`);
+    const res  = await fetch(`${OW_BASE}?type=geo&q=${encodeURIComponent(query)}&limit=1`);
     const data = await res.json();
-    if (!data.results || !data.results.length)
-      throw new Error(`Could not find "${query}". Try a more specific name.`);
-    const r = data.results[0];
-    return {
-      lat:  r.geometry.location.lat,
-      lng:  r.geometry.location.lng,
-      name: r.address_components[0]?.long_name || r.formatted_address.split(',')[0],
-    };
+    if (!data.length) throw new Error(`Could not find "${query}". Try "City, State" e.g. "Indore, MP".`);
+    return { lat: data[0].lat, lng: data[0].lon, name: data[0].name };
   }
 
-  // ── GOOGLE MAPS PLACES AUTOCOMPLETE ──
-  async function fetchSuggestions(query, userLat, userLng) {
+  async function fetchSuggestions(query) {
     if (query.length < 2) return [];
-    let url = `${MAPS_BASE}?type=autocomplete&q=${encodeURIComponent(query)}`;
-    if (userLat && userLng) url += `&lat=${userLat}&lng=${userLng}&radius=50000`;
-    const res  = await fetch(url);
+    const res  = await fetch(`${OW_BASE}?type=geo&q=${encodeURIComponent(query)}&limit=5`);
     const data = await res.json();
-    if (!data.predictions) return [];
-    return data.predictions.map(p => ({
-      name:     p.structured_formatting?.main_text || p.description.split(',')[0],
-      subtext:  p.structured_formatting?.secondary_text || '',
-      place_id: p.place_id,
+    if (!Array.isArray(data)) return [];
+    return data.map(r => ({
+      name:    r.name,
+      subtext: [r.state, r.country].filter(Boolean).join(', '),
+      lat:     r.lat,
+      lng:     r.lon,
     }));
-  }
-
-  async function getPlaceCoords(place_id) {
-    const res  = await fetch(`${MAPS_BASE}?type=details&q=${place_id}`);
-    const data = await res.json();
-    if (!data.result) return null;
-    return {
-      lat:  data.result.geometry.location.lat,
-      lng:  data.result.geometry.location.lng,
-      name: data.result.name,
-    };
   }
 
   async function reverseGeocode(lat, lng) {
     try {
-      const res  = await fetch(`${MAPS_BASE}?type=reverse&lat=${lat}&lng=${lng}`);
+      const res  = await fetch(`${OW_BASE}?type=reverse&lat=${lat}&lon=${lng}`);
       const data = await res.json();
-      const comp = data?.results?.[0]?.address_components;
-      return comp?.find(c => c.types.includes('locality'))?.long_name
-          || comp?.find(c => c.types.includes('administrative_area_level_2'))?.long_name
-          || 'Current Location';
+      return data?.[0]?.name || 'Current Location';
     } catch { return 'Current Location'; }
   }
 
-  // ── ZONE LABEL (Google Maps reverse geocode at suburb level) ──
   async function getZoneLabel(lat, lng, fallbackIdx) {
     try {
-      const res  = await fetch(`${MAPS_BASE}?type=reverse&lat=${lat}&lng=${lng}`);
+      const res  = await fetch(`${OW_BASE}?type=reverse&lat=${lat}&lon=${lng}`);
       const data = await res.json();
-      const comp = data?.results?.[0]?.address_components;
-      return comp?.find(c => c.types.includes('sublocality_level_1'))?.long_name
-          || comp?.find(c => c.types.includes('sublocality'))?.long_name
-          || comp?.find(c => c.types.includes('neighborhood'))?.long_name
-          || comp?.find(c => c.types.includes('locality'))?.long_name
-          || ZONE_DIRECTION_LABELS[fallbackIdx]
-          || `Zone ${fallbackIdx + 1}`;
+      return data?.[0]?.name || ZONE_DIRECTION_LABELS[fallbackIdx] || `Zone ${fallbackIdx + 1}`;
     } catch { return ZONE_DIRECTION_LABELS[fallbackIdx] || `Zone ${fallbackIdx + 1}`; }
   }
 
@@ -528,12 +498,11 @@ Rules:
             const item = document.createElement('div');
             item.className = 'sr-suggestion-item';
             item.innerHTML = `${r.name}<span>${r.subtext}</span>`;
-            item.addEventListener('mousedown', async e => {
+            item.addEventListener('mousedown', e => {
               e.preventDefault();
-              input.value = r.name;
+              input.value   = r.name;
+              input._coords = { lat: r.lat, lng: r.lng, name: r.name };
               dropdown.classList.remove('open');
-              const coords = await getPlaceCoords(r.place_id);
-              if (coords) input._coords = coords;
             });
             dropdown.appendChild(item);
           });

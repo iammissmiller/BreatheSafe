@@ -300,7 +300,7 @@ Rules:
     if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
   }
 
-  function showDone() {
+  async function showDone() {
     clearTimer();
     document.getElementById('hz-progress-fill').style.width = '100%';
     const triggers = [...selectedTriggers].join(', ');
@@ -354,7 +354,7 @@ Rules:
   skipBtn.addEventListener('click', advanceStep);
 
   // ── RESET ────────────────────────────────────────────────
-  function doReset() {
+  async function doReset() {
     clearTimer();
     // Save partial episode if steps were started
     if (protocol && currentStep > 0) {
@@ -382,8 +382,8 @@ Rules:
     showLeftStep('hz-s0');
   }
 
-  if (resetBtn) resetBtn.addEventListener('click', doReset);
-  if (doneBtn)  doneBtn.addEventListener('click',  doReset);
+  if (resetBtn) resetBtn.addEventListener('click', () => doReset());
+  if (doneBtn)  doneBtn.addEventListener('click',  () => doReset());
 
   // Back button from protocol to trigger selection
   const backBtn = document.getElementById('hz-back-btn');

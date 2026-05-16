@@ -1,6 +1,7 @@
 /* ═══════════════════════════════════════════
    BREATHESAFE — quiz.js
 ═══════════════════════════════════════════ */
+import { saveProfile } from './db.js';
 
 const questions = [
   {
@@ -217,12 +218,12 @@ function attachEvents(q) {
 }
 
 /* ── ADVANCE ── */
-function advance() {
+async function advance() {
   if (current < questions.length - 1) {
     current++;
     renderQuestion(current, 'forward');
   } else {
-    saveAndFinish();
+    await saveAndFinish();
   }
 }
 
@@ -235,8 +236,11 @@ document.addEventListener('click', e => {
 });
 
 /* ── SAVE & FINISH ── */
-function saveAndFinish() {
+async function saveAndFinish() {
+  // Save to localStorage immediately
   Object.entries(answers).forEach(([k, v]) => localStorage.setItem(k, v));
+  // Save to Firestore
+  await saveProfile(answers).catch(e => console.warn('Profile save:', e));
 
   const card = document.createElement('div');
   card.className = 'quiz-card quiz-done';

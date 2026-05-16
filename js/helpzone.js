@@ -1,3 +1,5 @@
+import { saveEpisode as saveEpisodeFirestore } from './db.js';
+
 // helpzone.js — BreatheSafe HelpZone v3
 // Multi-select triggers + Groq step-by-step guided protocol
 
@@ -307,7 +309,7 @@ Rules:
       `You completed all ${protocol.steps.length} steps for ${triggers}. Rest for a moment and consider logging this in Symptoms.`;
 
     // Save episode to localStorage
-    saveEpisode([...selectedTriggers], protocol.steps.length);
+    await saveEpisode([...selectedTriggers], protocol.steps.length);
 
     // Hide protocol, show done
     document.getElementById('hz-protocol').classList.remove('active');
@@ -318,18 +320,14 @@ Rules:
     showLeftStep('hz-s2');
   }
 
-  function saveEpisode(triggers, stepsCompleted) {
-    try {
-      const today    = new Date().toISOString().split('T')[0];
-      const episodes = JSON.parse(localStorage.getItem('bs-episodes') || '[]');
-      episodes.push({
-        date:           today,
-        time:           new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        triggers,
-        stepsCompleted,
-      });
-      localStorage.setItem('bs-episodes', JSON.stringify(episodes));
-    } catch (e) {}
+  async function saveEpisode(triggers, stepsCompleted) {
+    const episode = {
+      date:           new Date().toISOString().split('T')[0],
+      time:           new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      triggers,
+      stepsCompleted,
+    };
+    await saveEpisodeFirestore(episode).catch(e => console.warn('Episode save:', e));
   }
 
   // ── GO BUTTON ────────────────────────────────────────────
@@ -361,7 +359,7 @@ Rules:
     clearTimer();
     // Save partial episode if steps were started
     if (protocol && currentStep > 0) {
-      saveEpisode([...selectedTriggers], currentStep);
+      await saveEpisode([...selectedTriggers], currentStep);
     }
     selectedTriggers.clear();
     protocol    = null;

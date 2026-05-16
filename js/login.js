@@ -1,45 +1,23 @@
-import { auth, provider }
+import { auth, provider } from "./firebase.js";
+import { signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { syncOnLogin } from "./db.js";
 
-from "./firebase.js";
-
-import {
-
-    signInWithPopup
-
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-/* BUTTON */
-
-const loginButton =
-
-document.getElementById("google-login");
-
-/* LOGIN */
+const loginButton = document.getElementById("google-login");
 
 loginButton.addEventListener("click", async () => {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    const user   = result.user;
+    console.log("Signed in:", user.displayName);
 
-    try {
+    // Sync Firestore data to localStorage before redirecting
+    await syncOnLogin();
 
-        const result =
+    // If profile exists go to dashboard, else quiz
+    const hasProfile = localStorage.getItem('bs-name');
+    window.location.href = hasProfile ? "dashboard.html" : "quiz.html";
 
-        await signInWithPopup(auth, provider);
-
-        const user = result.user;
-
-        console.log(user);
-
-        /* REDIRECT */
-
-        window.location.href =
-
-        "quiz.html";
-
-    }
-
-    catch(error) {
-
-        console.log(error);
-
-    }
-
+  } catch (error) {
+    console.error("Login error:", error);
+  }
 });

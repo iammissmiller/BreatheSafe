@@ -1,3 +1,5 @@
+import { savelog as saveLogFirestore, loadLogs } from './db.js';
+
 /* ═══════════════════════════════════════════
    BREATHESAFE — symptoms.js
    Saves bs-logs: [{ date, comfort, symptoms:
@@ -98,7 +100,7 @@ document.querySelectorAll('.sym-row').forEach(row => {
 /* ── SUBMIT ── */
 document.getElementById('submitBtn').addEventListener('click', saveEntry);
 
-function saveEntry() {
+async function saveEntry() {
   const comfort = parseInt(slider.value);
 
   const symptoms = [...document.querySelectorAll('.sym-row.active')].map(row => ({
@@ -111,9 +113,8 @@ function saveEntry() {
 
   const entry = { date: today, comfort, symptoms, timeOfDay, trigger };
 
-  const existing = getLogs().filter(l => l.date !== today);
-  existing.push(entry);
-  saveLogs(existing);
+  // Save to Firestore + localStorage via db.js
+  await saveLogFirestore(entry).catch(e => console.warn('Log save:', e));
 
   showConfirm(comfort, symptoms, timeOfDay, trigger);
 }

@@ -43,7 +43,9 @@
     attribution: '© OpenStreetMap © CARTO', maxZoom: 19
   });
 
-  (document.body.classList.contains('dark') ? darkTile : lightTile).addTo(map);
+  // Check both body and html for dark class (FOUC fix applied to html too)
+  const initDark = document.body.classList.contains('dark') || document.documentElement.classList.contains('dark');
+  (initDark ? darkTile : lightTile).addTo(map);
   L.control.zoom({ position: 'topright' }).addTo(map);
 
   setTimeout(() => map.invalidateSize(), 300);

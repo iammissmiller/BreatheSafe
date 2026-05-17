@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="20" fill="#C96A00"/>
+  <rect width="100" height="100" rx="20" fill="#E07A10" opacity="0.5"/>
+  <path d="M50,10 C78,18 88,42 72,65 C62,80 38,80 28,65 C12,42 22,18 50,10 Z" fill="#FFF5E8" opacity="0.95"/>
+  <line x1="50" y1="14" x2="50" y2="78" stroke="#C96A00" stroke-width="3" stroke-linecap="round"/>
+  <line x1="50" y1="35" x2="68" y2="48" stroke="#C96A00" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+  <line x1="50" y1="50" x2="72" y2="62" stroke="#C96A00" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+  <line x1="50" y1="64" x2="66" y2="74" stroke="#C96A00" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <line x1="50" y1="35" x2="32" y2="48" stroke="#C96A00" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+  <line x1="50" y1="50" x2="28" y2="62" stroke="#C96A00" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+  <line x1="50" y1="64" x2="34" y2="74" stroke="#C96A00" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <path d="M50,78 C53,88 58,93 55,100" fill="none" stroke="#FFF5E8" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+</svg>

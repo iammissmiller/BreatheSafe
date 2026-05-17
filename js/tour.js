@@ -17,24 +17,24 @@ const steps = [
     desc: 'Live environmental warnings land here. Check these before heading out each day — they update with AQI shifts, wind, humidity and pollen levels in your area.'
   },
   {
-    target: '.feature-card:nth-child(2)',
+    target: '.feature-card:nth-child(1)',
     title: 'Log Your Symptoms First',
     desc: 'Start here every day. Log how you feel — even if you feel fine. The more you log, the smarter your dashboard, insights and analytics become over time.'
   },
   {
-    target: '.feature-card:nth-child(1)',
-    title: 'SafeRoute',
-    desc: 'Planning to go out? SafeRoute finds the cleanest, lowest-pollution path to your destination so you breathe easier on the way.'
-  },
-  {
-    target: '.feature-card:nth-child(4)',
+    target: '.feature-card:nth-child(2)',
     title: 'Analytics',
     desc: 'Your daily symptom logs become patterns. See exactly when and why your breathing struggles — by time, location, weather or season.'
   },
   {
     target: '.feature-card:nth-child(3)',
     title: 'HelpZone',
-    desc: 'Your AI respiratory assistant. Ask it anything — what your symptoms mean, what to avoid today, or what to do right now.'
+    desc: 'Having a breathing emergency? HelpZone generates a real step-by-step action protocol tailored to your symptoms — like a paramedic in your pocket.'
+  },
+  {
+    target: '.feature-card:nth-child(4)',
+    title: 'SafeRoute',
+    desc: 'Planning to go out? SafeRoute finds the cleanest, lowest-pollution path to your destination so you breathe easier on the way.'
   }
 ];
 
@@ -80,26 +80,6 @@ style.textContent = `
     pointer-events: all;
   }
   .tour-card-el.visible { opacity: 1; }
-
-  /* Mobile: full width bottom sheet */
-  @media (max-width: 700px) {
-    .tour-card-el {
-      left: 0 !important;
-      right: 0 !important;
-      bottom: 0 !important;
-      top: auto !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      border-radius: 20px 20px 0 0;
-      padding: 24px 20px 32px;
-      transform: translateY(100%);
-      transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.22,1,0.36,1);
-    }
-    .tour-card-el.visible {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
   .tour-eyebrow {
     font-family: var(--font-sans);
     font-size: 10px; font-weight: 500;
@@ -159,19 +139,11 @@ let prevEl  = null;
 
 /* ── SMART POSITION NEAR ELEMENT ── */
 function positionCard(el, side) {
-  const vw  = window.innerWidth;
-
-  // On mobile, CSS handles it as bottom sheet — don't set inline styles
-  if (vw <= 700) {
-    card.style.top  = '';
-    card.style.left = '';
-    return;
-  }
-
   const r   = el.getBoundingClientRect();
   const cw  = 340;
   const ch  = 220;
   const pad = 16;
+  const vw  = window.innerWidth;
   const vh  = window.innerHeight;
   let top, left;
 

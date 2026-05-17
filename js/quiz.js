@@ -34,7 +34,7 @@ const questions = [
     id: 'conditions',
     eyebrow: 'Your health',
     question: 'Do you have any respiratory conditions?',
-    type: 'choice',
+    type: 'multi',
     options: ['Asthma', 'Allergies', 'COPD', 'None', 'Prefer not to say'],
     key: 'bs-conditions'
   },
@@ -101,6 +101,17 @@ function renderQuestion(index, direction = 'forward') {
       ).join('') + `</div>`;
   }
 
+  if (q.type === 'multi') {
+    const selected = answers[q.key] ? answers[q.key].split(',') : [];
+    inputHTML = `<div class="quiz-choices multi-select">` +
+      q.options.map(opt => `
+        <button class="quiz-choice ${selected.includes(opt) ? 'selected' : ''}" data-val="${opt}">
+          <span class="choice-dot multi-dot"></span>${opt}
+        </button>`
+      ).join('') + `</div>
+      <div class="multi-hint">Select all that apply</div>`;
+  }
+
   if (q.type === 'yesno') {
     inputHTML = `<div class="quiz-yesno">` +
       q.options.map(opt => `
@@ -118,7 +129,7 @@ function renderQuestion(index, direction = 'forward') {
       </div>`;
   }
 
-  const isNextActive = answers[q.key] !== undefined || q.type === 'slider' ? 'active' : '';
+  const isNextActive = answers[q.key] !== undefined || q.type === 'slider' || q.type === 'multi' && answers[q.key] ? 'active' : '';
   const isLast = index === questions.length - 1;
 
   card.innerHTML = `
@@ -185,6 +196,35 @@ function attachEvents(q) {
         btn.classList.add('selected');
         answers[q.key] = btn.dataset.val;
         nextBtn.classList.add('active');
+      });
+    });
+  }
+
+  /* multi-select */
+  if (q.type === 'multi') {
+    const getSelected = () => [...document.querySelectorAll('.quiz-choice.selected')].map(b => b.dataset.val);
+    document.querySelectorAll('.quiz-choice').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = btn.dataset.val;
+        // If "None" or "All of them" clicked, deselect others
+        if (val === 'None' || val === 'All of them') {
+          document.querySelectorAll('.quiz-choice').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+        } else {
+          // Deselect None/All if present
+          document.querySelectorAll('.quiz-choice').forEach(b => {
+            if (b.dataset.val === 'None' || b.dataset.val === 'All of them') b.classList.remove('selected');
+          });
+          btn.classList.toggle('selected');
+        }
+        const sel = getSelected();
+        if (sel.length > 0) {
+          answers[q.key] = sel.join(',');
+          nextBtn.classList.add('active');
+        } else {
+          delete answers[q.key];
+          nextBtn.classList.remove('active');
+        }
       });
     });
   }

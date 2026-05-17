@@ -343,3 +343,31 @@ body.dark .particle {
   .quiz-card { padding: 2rem 1.5rem; }
   .quiz-question { font-size: 22px; }
 }
+/* ── MULTI SELECT ── */
+.multi-hint {
+  font-size: 11px;
+  color: var(--mu);
+  text-align: center;
+  margin-top: -4px;
+  margin-bottom: 1rem;
+  letter-spacing: 0.05em;
+}
+
+.multi-dot {
+  border-radius: 4px !important;
+}
+
+.quiz-choice.selected .multi-dot {
+  border-radius: 4px !important;
+}
+
+.quiz-choice.selected .multi-dot::after {
+  content: '✓' !important;
+  width: auto !important;
+  height: auto !important;
+  border-radius: 0 !important;
+  background: none !important;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}

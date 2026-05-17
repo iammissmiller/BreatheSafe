@@ -160,7 +160,24 @@ Write the insight now. 2-3 sentences only. No bullet points. No markdown.`;
 
   } catch (err) {
     console.error('Groq error:', err);
-    aiInsight.textContent = 'AI insight unavailable. Check your connection.';
+    aiInsight.textContent = generateFallbackInsight(aqi, aqiText);
+  }
+}
+
+function generateFallbackInsight(aqi, aqiText) {
+  const name       = profile.name ? profile.name.split(' ')[0] : null;
+  const conditions = profile.conditions || 'None';
+  const greeting   = name ? `${name}, ` : '';
+  const log        = getLatestLog();
+  const today      = new Date().toISOString().split('T')[0];
+  const loggedToday = log?.date === today;
+
+  if (aqi <= 2) {
+    return `${greeting}air quality is ${aqiText.toLowerCase()} today — a good time for outdoor activity. ${conditions !== 'None' ? `With your ${conditions}, this is one of the better days to spend time outside.` : 'Enjoy the clean air while it lasts.'} ${loggedToday ? `Your comfort score of ${log.comfort}/10 aligns well with today's conditions.` : 'Consider logging your symptoms to track how you feel on days like this.'}`;
+  } else if (aqi === 3) {
+    return `${greeting}air quality is moderate today — generally acceptable but some pollutants are present. ${conditions !== 'None' ? `With your ${conditions}, limit prolonged outdoor exposure and keep your rescue medication nearby.` : 'Sensitive individuals may want to limit extended outdoor activity.'} ${loggedToday ? '' : 'Log your symptoms today to build a clearer picture of how moderate AQI affects you.'}`.trim();
+  } else {
+    return `${greeting}air quality is ${aqiText.toLowerCase()} right now — outdoor exposure should be minimised. ${conditions !== 'None' ? `Your ${conditions} makes you more vulnerable on days like this — stay indoors where possible and ensure your medication is accessible.` : 'Everyone should reduce outdoor activity until conditions improve.'} Check back later as AQI levels often improve by evening.`;
   }
 }
 

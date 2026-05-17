@@ -293,14 +293,17 @@ async function saveAndFinish() {
   `;
 
   const old = stage.querySelector('.quiz-card');
-if (old) {
-  old.classList.add('exit');
-  old.addEventListener('animationend', () => {
-    old.remove();
+  if (old) {
+    old.classList.add('exit');
+    old.addEventListener('animationend', () => {
+      old.remove();
+      card.classList.add('enter');
+      stage.appendChild(card);
+    }, { once: true });
+  } else {
     card.classList.add('enter');
     stage.appendChild(card);
-  }, { once: true });
-}
+  }
   progressBar.style.width = '100%';
   counter.style.display = 'none';
 }

@@ -68,7 +68,7 @@ const questions = [
     id: 'concern',
     eyebrow: 'Your priorities',
     question: 'What\'s your biggest air quality concern?',
-    type: 'choice',
+    type: 'multi',
     options: ['Pollution', 'Pollen', 'Dust', 'Smoke', 'All of them'],
     key: 'bs-concern'
   }

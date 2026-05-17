@@ -265,3 +265,22 @@ body.dark .particle {
   .login-card { padding: 2rem 1.5rem; }
   .login-card h1 { font-size: 1.9rem; }
 }
+
+/* ── FORGOT PASSWORD ── */
+.login-forgot-wrap {
+  text-align: right;
+  margin-top: -4px;
+}
+
+.login-forgot-btn {
+  background: none;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  color: var(--mu);
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 0;
+}
+
+.login-forgot-btn:hover { color: var(--or); }

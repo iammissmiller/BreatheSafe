@@ -3,6 +3,7 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { syncOnLogin } from "./db.js";
 
@@ -105,6 +106,29 @@ emailAuthBtn.addEventListener('click', async () => {
 passwordInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') emailAuthBtn.click();
 });
+
+// ── FORGOT PASSWORD ──
+const forgotBtn = document.getElementById('forgotBtn');
+if (forgotBtn) {
+  forgotBtn.addEventListener('click', async () => {
+    const email = emailInput.value.trim();
+    if (!email) {
+      showError('Enter your email address first, then click Forgot password.');
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      hideError();
+      loginError.style.background = 'rgba(39,174,96,0.08)';
+      loginError.style.borderColor = 'rgba(39,174,96,0.2)';
+      loginError.style.color = '#27ae60';
+      loginError.textContent = 'Password reset email sent! Check your inbox.';
+      loginError.classList.add('visible');
+    } catch (error) {
+      showError(friendlyError(error.code));
+    }
+  });
+}
 
 // ── GOOGLE AUTH ──
 googleBtn.addEventListener('click', async () => {

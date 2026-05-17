@@ -118,4 +118,5 @@ body {
 
 a { text-decoration: none; color: inherit; }
 button { border: none; outline: none; cursor: pointer; font-family: var(--font-sans); }
-html.dark body { background: var(--bg); }
+/* ── FOUC PREVENTION ── */
+html { background: var(--bg); }

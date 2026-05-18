@@ -9,6 +9,29 @@ import { saveEpisode as saveEpisodeFirestore } from './db.js';
   const GROQ_URL   = '/api/groq';
   const GROQ_MODEL = 'llama-3.1-8b-instant';
 
+  // ── TEXT TO SPEECH ──────────────────────────────────────
+  let speechEnabled = true;
+
+  function speak(text) {
+    if (!speechEnabled || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel(); // stop any current speech
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate   = 0.9;  // slightly slower for clarity
+    utter.pitch  = 1.0;
+    utter.volume = 1.0;
+    // Prefer a calm English voice
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('female'))
+                   || voices.find(v => v.lang.startsWith('en'))
+                   || voices[0];
+    if (preferred) utter.voice = preferred;
+    window.speechSynthesis.speak(utter);
+  }
+
+  function stopSpeech() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+  }
+
   // ── FALLBACK steps if Groq fails ─────────────────────────
   const FALLBACK = {
     title: 'Breathing Recovery Protocol',
@@ -192,6 +215,22 @@ Rules:
     currentStep = -1;
 
     document.getElementById('hz-proto-eyebrow').textContent = `${protocol.steps.length}-Step Action Plan`;
+
+    // Add voice toggle if not already there
+    if (!document.getElementById('hz-voice-toggle')) {
+      const voiceBtn = document.createElement('button');
+      voiceBtn.id = 'hz-voice-toggle';
+      voiceBtn.className = 'hz-voice-btn';
+      voiceBtn.innerHTML = '🔊 Voice';
+      voiceBtn.addEventListener('click', () => {
+        speechEnabled = !speechEnabled;
+        voiceBtn.innerHTML = speechEnabled ? '🔊 Voice' : '🔇 Muted';
+        voiceBtn.classList.toggle('muted', !speechEnabled);
+        if (!speechEnabled) stopSpeech();
+      });
+      const headerRow = document.querySelector('.hz-proto-header-row');
+      if (headerRow) headerRow.appendChild(voiceBtn);
+    }
     document.getElementById('hz-proto-title').textContent   = protocol.title;
     document.getElementById('hz-proto-intro').textContent   = protocol.intro;
     document.getElementById('hz-progress-fill').style.width = '0%';
@@ -260,6 +299,12 @@ Rules:
       card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
+    // Read step aloud
+    const step = protocol.steps[currentStep];
+    if (step) {
+      speak(`Step ${currentStep + 1}. ${step.action}. ${step.desc}`);
+    }
+
     // Update progress
     const pct = (currentStep / protocol.steps.length) * 100;
     document.getElementById('hz-progress-fill').style.width = `${pct}%`;
@@ -269,8 +314,7 @@ Rules:
     nextBtn.textContent = isLast ? 'Complete ✓' : 'Next step →';
 
     // Start timer if this step has duration
-    const step = protocol.steps[currentStep];
-    if (step.duration > 0) {
+    if (step && step.duration > 0) {
       startTimer(step.duration, currentStep);
     }
   }
@@ -302,6 +346,7 @@ Rules:
 
   async function showDone() {
     clearTimer();
+    stopSpeech();
     document.getElementById('hz-progress-fill').style.width = '100%';
     const triggers = [...selectedTriggers].join(', ');
     document.getElementById('hz-done-msg').textContent =

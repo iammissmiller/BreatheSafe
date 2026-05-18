@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="icon" href="../src/favicon.svg" type="image/svg+xml">
-<script>if(localStorage.getItem("bs-theme")==="dark")document.documentElement.classList.add("dark"),document.body&&document.body.classList.add("dark");</script>
+  <link rel="icon" type="image/svg+xml" href="../src/favicon.svg">
+<script>if(localStorage.getItem("bs-theme")==="dark"){document.documentElement.classList.add("dark");document.documentElement.style.background="#0f0f0f";var s=document.createElement("style");s.textContent="*{transition:none!important}";document.head.appendChild(s);window.addEventListener("DOMContentLoaded",function(){document.body&&document.body.classList.add("dark");setTimeout(function(){s.remove()},100)});}</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HelpZone — BreatheSafe</title>
@@ -110,7 +110,7 @@
       <!-- STEP 2: Summary (shown after done) -->
       <div class="hz-step" id="hz-s2">
         <div class="hz-section-label">Episode complete</div>
-        <p style="font-size:0.82rem;color:var(--muted,#888);line-height:1.6">
+        <p style="font-size:0.82rem;color:var(--mu);line-height:1.6">
           You made it through. Take a moment to rest before logging this episode in Symptoms.
         </p>
         <button class="hz-reset-btn" id="hz-reset-btn">← Start again</button>
@@ -132,9 +132,9 @@
       <div class="hz-protocol" id="hz-protocol">
 
         <div class="hz-proto-header">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <button id="hz-back-btn" class="hz-back-btn">← Back</button>
+          <div class="hz-proto-header-row">
             <div class="hz-proto-eyebrow" id="hz-proto-eyebrow">Action Plan</div>
-            <button id="hz-back-btn" style="background:none;border:none;font-size:0.75rem;color:var(--mu);cursor:pointer;font-family:var(--font-sans);">← Back</button>
           </div>
           <div class="hz-proto-title" id="hz-proto-title">—</div>
           <div class="hz-proto-intro" id="hz-proto-intro">—</div>

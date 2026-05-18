@@ -655,3 +655,47 @@ body.dark .hz-done-title { color: #f0ece6; }
   .nav-links { display: none !important; }
   .nav-hamburger { display: flex; }
 }
+
+/* ── PROTOCOL HEADER REFINEMENT ── */
+.hz-back-btn {
+  background: none;
+  border: none;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--mu);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  padding: 0;
+  margin-bottom: 8px;
+  letter-spacing: 0.04em;
+  transition: color 0.2s;
+  display: block;
+}
+
+.hz-back-btn:hover { color: var(--or); }
+
+.hz-proto-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.hz-voice-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--su);
+  border: 1px solid var(--bd);
+  border-radius: 100px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-family: var(--font-sans);
+  color: var(--mu);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.hz-voice-btn:hover { border-color: var(--or); color: var(--or); }
+.hz-voice-btn.muted { opacity: 0.5; }
